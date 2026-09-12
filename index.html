@@ -15,10 +15,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Firebase v9+ Compat SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- Firebase v9+ Compat SDKs (Optional / Non-blocking) -->
+  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- Immediate local auth state check to prevent flicker on refresh -->
+  <script>
+    (function() {
+      try {
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+          document.documentElement.classList.add('is-authenticated');
+        }
+      } catch (e) {}
+    })();
+  </script>
 
   <script>
     tailwind.config = {
@@ -96,7 +107,7 @@
           <div id="loginError" class="hidden text-xs font-semibold text-red-600 bg-red-50 p-2 rounded-lg border border-red-200">
             Invalid credentials. Use Username: <span class="font-mono font-bold">kisan</span> / Password: <span class="font-mono font-bold">kisan123</span>
           </div>
-          <button type="submit" class="w-full py-2.5 bg-[#14532d] hover:bg-[#0e3b20] text-white font-bold rounded-xl text-xs shadow-md transition tracking-wide flex items-center justify-center gap-2">
+          <button type="submit" id="loginBtn" class="w-full py-2.5 bg-[#14532d] hover:bg-[#0e3b20] text-white font-bold rounded-xl text-xs shadow-md transition tracking-wide flex items-center justify-center gap-2">
             <i class="fa-solid fa-right-to-bracket"></i>
             <span>Log In to Dashboard</span>
           </button>
@@ -109,7 +120,7 @@
   </div>
 
   <!-- ==================== MAIN APPLICATION CONTAINER ==================== -->
-  <div id="appContainer" class="flex flex-1 min-h-screen">
+  <div id="appContainer" class="hidden flex flex-1 min-h-screen">
     
     <!-- Left Sidebar -->
     <aside id="sidebar" class="w-64 bg-[#0e3b20] text-slate-200 flex flex-col justify-between shrink-0 shadow-xl border-r border-[#19522f] transition-all duration-200 z-40 fixed md:static inset-y-0 left-0 -translate-x-full md:translate-x-0">
@@ -871,7 +882,57 @@
     </div>
   </div>
 
-  <!-- Application Logic & Firebase Configuration -->
+  <!-- Inline Core Handlers (Guarantees immediate local auth and modal toggles without waiting for external resources) -->
+  <script>
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('hidden');
+    }
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    }
+    function showModal(id) { openModal(id); }
+    function hideModal(id) { closeModal(id); }
+    function toggleModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.classList.contains('hidden')) openModal(id);
+      else closeModal(id);
+    }
+    function handleDemoLogin(e) {
+      if (e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+      }
+      const u = (document.getElementById('loginUsername')?.value || '').trim();
+      const p = (document.getElementById('loginPassword')?.value || '').trim();
+      const err = document.getElementById('loginError');
+      const authScreen = document.getElementById('authScreen');
+      const appContainer = document.getElementById('appContainer');
+
+      if (u === 'kisan' && p === 'kisan123') {
+        if (err) err.classList.add('hidden');
+        if (authScreen) authScreen.classList.add('hidden');
+        if (appContainer) appContainer.classList.remove('hidden');
+        localStorage.setItem('isLoggedIn', 'true');
+        return false;
+      } else {
+        if (err) err.classList.remove('hidden');
+        return false;
+      }
+    }
+    // Check initial auth state immediately upon script execution
+    try {
+      if (localStorage.getItem('isLoggedIn') === 'true') {
+        const authScreen = document.getElementById('authScreen');
+        const appContainer = document.getElementById('appContainer');
+        if (authScreen) authScreen.classList.add('hidden');
+        if (appContainer) appContainer.classList.remove('hidden');
+      }
+    } catch (err) {}
+  </script>
+
+  <!-- Full Application Logic & ERP Features -->
   <script src="/src/app.js"></script>
 </body>
 </html>

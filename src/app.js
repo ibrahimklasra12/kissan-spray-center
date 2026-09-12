@@ -114,46 +114,69 @@ async function syncCollectionToFirestore(colName, item) {
 }
 
 // =========================================================================
-// 4. AUTHENTICATION (Google Sign-In + Fallback Demo Login)
+// 4. AUTHENTICATION (Immediate Local Auth + Optional Google Sign-In)
 // =========================================================================
 function initAuth() {
-  const savedUser = localStorage.getItem(STORAGE_KEYS.AUTH);
-  if (savedUser) {
-    try {
-      currentUser = JSON.parse(savedUser);
-      renderUserProfile();
-      hideAuthScreen();
-    } catch (e) {
-      showAuthScreen();
+  const authScreen = document.getElementById('authScreen');
+  const appContainer = document.getElementById('appContainer');
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+
+  if (isLoggedIn) {
+    if (authScreen) authScreen.classList.add('hidden');
+    if (appContainer) appContainer.classList.remove('hidden');
+
+    currentUser = {
+      name: 'Kisan Admin',
+      email: 'kisan@spraycenter.pk',
+      avatar: 'K'
+    };
+    const savedUser = localStorage.getItem(STORAGE_KEYS.AUTH);
+    if (savedUser) {
+      try {
+        currentUser = JSON.parse(savedUser);
+      } catch (e) {}
     }
+    renderUserProfile();
   } else {
-    showAuthScreen();
+    if (authScreen) authScreen.classList.remove('hidden');
+    if (appContainer) appContainer.classList.add('hidden');
   }
 
+  // Non-blocking Firebase Auth sync (only if Firebase is loaded)
   if (isFirebaseReady && auth) {
-    auth.onAuthStateChanged((user) => {
-      if (user) {
-        currentUser = {
-          name: user.displayName || 'Kisan Admin',
-          email: user.email || 'ibrahimklasra12@gmail.com',
-          avatar: user.photoURL || 'K'
-        };
-        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(currentUser));
-        renderUserProfile();
-        hideAuthScreen();
-      }
-    });
+    try {
+      auth.onAuthStateChanged((user) => {
+        if (user) {
+          currentUser = {
+            name: user.displayName || 'Kisan Admin',
+            email: user.email || 'ibrahimklasra12@gmail.com',
+            avatar: user.photoURL || 'K'
+          };
+          localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(currentUser));
+          localStorage.setItem('isLoggedIn', 'true');
+          renderUserProfile();
+          if (authScreen) authScreen.classList.add('hidden');
+          if (appContainer) appContainer.classList.remove('hidden');
+        }
+      });
+    } catch (e) {
+      console.warn("Firebase auth listener error (ignored):", e);
+    }
   }
 }
 
 function showAuthScreen() {
   const screen = document.getElementById('authScreen');
+  const app = document.getElementById('appContainer');
   if (screen) screen.classList.remove('hidden');
+  if (app) app.classList.add('hidden');
 }
 
 function hideAuthScreen() {
   const screen = document.getElementById('authScreen');
+  const app = document.getElementById('appContainer');
   if (screen) screen.classList.add('hidden');
+  if (app) app.classList.remove('hidden');
 }
 
 function renderUserProfile() {
@@ -177,16 +200,16 @@ async function handleGoogleSignIn() {
     try {
       const provider = new window.firebase.auth.GoogleAuthProvider();
       await auth.signInWithPopup(provider);
+      localStorage.setItem('isLoggedIn', 'true');
+      hideAuthScreen();
       showToast('Google Sign-In Success', 'Welcome to Kissan Spray Center ERP');
+      return;
     } catch (err) {
-      console.warn("Google Sign-In failed or was cancelled:", err);
-      showToast('Google Auth Note', 'Using local session: ' + err.message, false);
-      demoLoginFallback();
+      console.warn("Google Sign-In failed or cancelled, using local session:", err);
     }
-  } else {
-    // Graceful fallback if Firebase config is not populated
-    demoLoginFallback();
   }
+  // Immediate local auth fallback
+  demoLoginFallback();
 }
 
 function demoLoginFallback() {
@@ -196,37 +219,69 @@ function demoLoginFallback() {
     avatar: 'K'
   };
   localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(currentUser));
+  localStorage.setItem('isLoggedIn', 'true');
   renderUserProfile();
   hideAuthScreen();
-  showToast('Logged In', 'Demo access enabled for Kissan Spray Center');
+  updateDashboard();
+  showToast('Logged In', 'Welcome to Kissan Spray Center');
 }
 
 function handleDemoLogin(e) {
-  e.preventDefault();
-  const u = document.getElementById('loginUsername').value.trim();
-  const p = document.getElementById('loginPassword').value.trim();
-  const err = document.getElementById('loginError');
+  if (e && typeof e.preventDefault === 'function') {
+    e.preventDefault();
+  }
+
+  const usernameInput = document.getElementById('loginUsername');
+  const passwordInput = document.getElementById('loginPassword');
+  const errEl = document.getElementById('loginError');
+  const authScreen = document.getElementById('authScreen');
+  const appContainer = document.getElementById('appContainer');
+
+  const u = usernameInput ? usernameInput.value.trim() : '';
+  const p = passwordInput ? passwordInput.value.trim() : '';
 
   if (u === 'kisan' && p === 'kisan123') {
-    if (err) err.classList.add('hidden');
-    demoLoginFallback();
+    if (errEl) errEl.classList.add('hidden');
+
+    // Hide authScreen and remove hidden from appContainer
+    if (authScreen) authScreen.classList.add('hidden');
+    if (appContainer) appContainer.classList.remove('hidden');
+
+    // Store isLoggedIn = true in localStorage
+    localStorage.setItem('isLoggedIn', 'true');
+
+    currentUser = {
+      name: 'Kisan Admin',
+      email: 'kisan@spraycenter.pk',
+      avatar: 'K'
+    };
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(currentUser));
+    renderUserProfile();
+    updateDashboard();
+    showToast('Logged In', 'Welcome to Kissan Spray Center');
+    return false;
   } else {
-    if (err) err.classList.remove('hidden');
+    if (errEl) errEl.classList.remove('hidden');
+    showToast('Login Failed', 'Invalid credentials. Enter kisan / kisan123', false);
+    return false;
   }
 }
 
 function handleLogout() {
   if (isFirebaseReady && auth) {
-    auth.signOut().catch(() => {});
+    try {
+      auth.signOut().catch(() => {});
+    } catch (e) {}
   }
   currentUser = null;
+  localStorage.removeItem('isLoggedIn');
   localStorage.removeItem(STORAGE_KEYS.AUTH);
   showAuthScreen();
   showToast('Logged Out', 'Session ended securely');
 }
 
 // =========================================================================
-// 5. MODAL MANAGEMENT
+// 5. MODAL MANAGEMENT (Simple JavaScript Show/Hide/Toggle Functions)
 // =========================================================================
 function openModal(id) {
   const el = document.getElementById(id);
@@ -253,6 +308,24 @@ function openModal(id) {
 function closeModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('hidden');
+}
+
+function showModal(id) {
+  openModal(id);
+}
+
+function hideModal(id) {
+  closeModal(id);
+}
+
+function toggleModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.classList.contains('hidden')) {
+    openModal(id);
+  } else {
+    closeModal(id);
+  }
 }
 
 window.addEventListener('click', (e) => {
@@ -1145,10 +1218,71 @@ function resetAllDataToZero() {
 }
 
 // =========================================================================
-// 17. INITIALIZATION ON DOM READY
+// 17. GLOBAL BINDINGS & INITIALIZATION
 // =========================================================================
-document.addEventListener('DOMContentLoaded', () => {
+function setupEventListeners() {
+  const loginForm = document.getElementById('demoLoginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', function(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      handleDemoLogin(e);
+    });
+  }
+
+  const loginBtn = document.getElementById('loginBtn');
+  if (loginBtn) {
+    loginBtn.addEventListener('click', function(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      handleDemoLogin(e);
+    });
+  }
+
+  const googleBtn = document.getElementById('btnGoogleLogin');
+  if (googleBtn) {
+    googleBtn.addEventListener('click', function(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      handleGoogleSignIn();
+    });
+  }
+}
+
+// Global window exposure for inline HTML event handlers
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.showModal = showModal;
+window.hideModal = hideModal;
+window.toggleModal = toggleModal;
+window.handleDemoLogin = handleDemoLogin;
+window.handleLogout = handleLogout;
+window.handleGoogleSignIn = handleGoogleSignIn;
+window.submitSale = submitSale;
+window.submitPurchase = submitPurchase;
+window.submitFarmerRecovery = submitFarmerRecovery;
+window.submitExpense = submitExpense;
+window.exportAllCSV = exportAllCSV;
+window.loadSampleDemoData = loadSampleDemoData;
+window.resetAllDataToZero = resetAllDataToZero;
+window.editProductStock = editProductStock;
+window.deleteProduct = deleteProduct;
+window.paySupplierBill = paySupplierBill;
+window.sendWhatsAppReceipt = sendWhatsAppReceipt;
+window.onSaleProductChange = onSaleProductChange;
+window.onPaymentTypeChange = onPaymentTypeChange;
+window.calcSaleTotals = calcSaleTotals;
+window.calcPurchTotals = calcPurchTotals;
+window.onRecFarmerChange = onRecFarmerChange;
+window.navigateView = navigateView;
+window.toggleSidebar = toggleSidebar;
+
+function initApp() {
   loadLocalData();
   initAuth();
+  setupEventListeners();
   updateDashboard();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
