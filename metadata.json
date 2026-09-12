@@ -1,0 +1,6 @@
+{
+  "name": "Kissan Spray Center",
+  "description": "Enterprise Agrochemical ERP and Point of Sale web application for Kissan Spray Center (Pull 88,000) with POS, inventory, farmer credit ledgers, supplier payables, and expiry tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

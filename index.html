@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KISSAN SPRAY CENTER - ERP & POS</title>
+  <meta name="description" content="Kissan Spray Center - Pull 88,000 | Contact: 03426400074. Complete Agrochemical ERP, Point of Sale, Inventory & Farmer Credit Ledger.">
+  <meta property="og:title" content="KISSAN SPRAY CENTER - ERP & POS">
+  <meta property="og:description" content="Every farmer's trust | Pull 88,000 | Ph: 03426400074">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Firebase v9+ Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            forest: {
+              800: '#143d22',
+              900: '#0c2e19',
+              950: '#071d10'
+            },
+            agri: {
+              gold: '#E5A93C',
+              emerald: '#166534',
+              teal: '#0f766e',
+              crimson: '#dc2626',
+              amber: '#d97706'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .modal-backdrop { background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(2px); }
+  </style>
+</head>
+<body class="bg-[#f3f6f9] text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- ==================== AUTH / LOGIN SCREEN ==================== -->
+  <div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+      <div class="bg-[#0e3b20] p-6 text-center text-white relative">
+        <div class="w-24 h-24 mx-auto mb-3 rounded-full border-4 border-amber-400 p-1 bg-white shadow-lg overflow-hidden flex items-center justify-center">
+          <img id="loginLogoImg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBg1l-p-fSC2nlfaFT3jF2O_4Xh6LCw_ORqrw2-w7dxkwlkDFbcOnGaiduZw6sBSAVahNUwD6bV7Plwq3UuB9uvbGsuQT9qcCCBU-YnOgGy5Vu13j4q5TE0QidClbeMwK51tNSomFok0javW-DSguhd_zym6YzPoe8-yY6b2sIhU5H7olG1N0I0fycfgJBmnalz663ST4M0bmnuwbUfgaNqmClfiDXnWu0CmjOJgPq5g2huQxPUOS-ii320CYGmjc9jw88" alt="Kissan Spray Center" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' fill=\'%231b4d2e\'><circle cx=\'50\' cy=\'50\' r=\'48\' fill=\'%230e3b20\' stroke=\'%23e5a93c\' stroke-width=\'4\'/><text x=\'50\' y=\'55\' fill=\'%23e5a93c\' font-size=\'32\' text-anchor=\'middle\' font-weight=\'bold\'>🌾</text></svg>'">
+        </div>
+        <h2 class="text-xl font-extrabold tracking-wide uppercase text-white">KISSAN SPRAY CENTER</h2>
+        <p class="text-xs text-amber-300 font-semibold mt-1">Every farmer's trust | Pull 88,000</p>
+        <p class="text-[11px] text-emerald-200/90 font-mono mt-0.5">Contact: 03426400074</p>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <!-- Firebase Google Auth Button -->
+        <button id="btnGoogleLogin" onclick="handleGoogleSignIn()" class="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-slate-300 rounded-xl hover:bg-slate-50 transition shadow-sm font-semibold text-slate-700 text-sm">
+          <i class="fa-brands fa-google text-red-500 text-base"></i>
+          <span>Sign In with Google</span>
+        </button>
+
+        <div class="flex items-center gap-3 text-slate-400 text-xs my-2">
+          <div class="h-px bg-slate-200 flex-1"></div>
+          <span class="font-medium text-[11px] uppercase tracking-wider text-slate-400">or Demo Account</span>
+          <div class="h-px bg-slate-200 flex-1"></div>
+        </div>
+
+        <form id="demoLoginForm" onsubmit="handleDemoLogin(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Username</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-user text-xs"></i></span>
+              <input type="text" id="loginUsername" value="kisan" class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-emerald-600 focus:border-emerald-600 font-medium" placeholder="Enter 'kisan'" required>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock text-xs"></i></span>
+              <input type="password" id="loginPassword" value="kisan123" class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-emerald-600 focus:border-emerald-600 font-medium" placeholder="Enter 'kisan123'" required>
+            </div>
+          </div>
+          <div id="loginError" class="hidden text-xs font-semibold text-red-600 bg-red-50 p-2 rounded-lg border border-red-200">
+            Invalid credentials. Use Username: <span class="font-mono font-bold">kisan</span> / Password: <span class="font-mono font-bold">kisan123</span>
+          </div>
+          <button type="submit" class="w-full py-2.5 bg-[#14532d] hover:bg-[#0e3b20] text-white font-bold rounded-xl text-xs shadow-md transition tracking-wide flex items-center justify-center gap-2">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Log In to Dashboard</span>
+          </button>
+        </form>
+        <div class="bg-amber-50 rounded-lg p-2.5 border border-amber-200 text-center">
+          <p class="text-[11px] text-amber-800 font-medium"><i class="fa-solid fa-shield-halved mr-1 text-amber-600"></i> Demo Credentials: <strong class="font-mono text-slate-900">kisan</strong> / <strong class="font-mono text-slate-900">kisan123</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN APPLICATION CONTAINER ==================== -->
+  <div id="appContainer" class="flex flex-1 min-h-screen">
+    
+    <!-- Left Sidebar -->
+    <aside id="sidebar" class="w-64 bg-[#0e3b20] text-slate-200 flex flex-col justify-between shrink-0 shadow-xl border-r border-[#19522f] transition-all duration-200 z-40 fixed md:static inset-y-0 left-0 -translate-x-full md:translate-x-0">
+      <div>
+        <!-- Brand Header -->
+        <div class="p-4 border-b border-[#1b502e] flex items-center gap-3 bg-[#0a2f19]">
+          <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBg1l-p-fSC2nlfaFT3jF2O_4Xh6LCw_ORqrw2-w7dxkwlkDFbcOnGaiduZw6sBSAVahNUwD6bV7Plwq3UuB9uvbGsuQT9qcCCBU-YnOgGy5Vu13j4q5TE0QidClbeMwK51tNSomFok0javW-DSguhd_zym6YzPoe8-yY6b2sIhU5H7olG1N0I0fycfgJBmnalz663ST4M0bmnuwbUfgaNqmClfiDXnWu0CmjOJgPq5g2huQxPUOS-ii320CYGmjc9jw88" alt="Logo" class="w-12 h-12 rounded-full object-cover border-2 border-amber-400 bg-white shadow shrink-0">
+          <div class="overflow-hidden">
+            <h1 class="text-white font-bold text-sm leading-tight tracking-wide uppercase truncate">Kissan Spray Center</h1>
+            <p class="text-xs text-amber-300 font-medium">Pull 88,000</p>
+            <div class="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-700/50 text-[10px] text-emerald-300 font-mono">
+              <i class="fa-solid fa-phone text-[9px]"></i> 03426400074
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="p-3 space-y-1 text-sm font-medium overflow-y-auto max-h-[calc(100vh-200px)]">
+          <button onclick="navigateView('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#e29d2b] text-slate-950 font-bold shadow-md transition">
+            <i class="fa-solid fa-table-columns text-base w-5"></i>
+            <span>Dashboard</span>
+          </button>
+          <button onclick="openModal('supplierLedgerModal')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-200 hover:bg-[#154c2a] hover:text-white transition">
+            <i class="fa-solid fa-truck-field text-emerald-400 w-5"></i>
+            <span>Suppliers</span>
+          </button>
+          <button onclick="openModal('purchaseModal')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-200 hover:bg-[#154c2a] hover:text-white transition">
+            <i class="fa-solid fa-cart-shopping text-emerald-400 w-5"></i>
+            <span>Purchase</span>
+          </button>
+          <button onclick="openModal('inventoryModal')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-200 hover:bg-[#154c2a] hover:text-white transition">
+            <i class="fa-solid fa-boxes-stacked text-emerald-400 w-5"></i>
+            <span>Inventory</span>
+          </button>
+          <button onclick="openModal('farmerLedgerModal')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-200 hover:bg-[#154c2a] hover:text-white transition">
+            <i class="fa-solid fa-users text-emerald-400 w-5"></i>
+            <span>Customers (Farmers)</span>
+          </button>
+          <button onclick="openModal('saleModal')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-200 hover:bg-[#154c2a] hover:text-white transition">
+            <i class="fa-solid fa-cash-register text-emerald-400 w-5"></i>
+            <span>Point of Sale</span>
+          </button>
+          <button onclick="openModal('farmerPaymentModal')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-200 hover:bg-[#154c2a] hover:text-white transition">
+            <i class="fa-solid fa-hand-holding-dollar text-emerald-400 w-5"></i>
+            <span>Farmer Recovery</span>
+          </button>
+          <button onclick="openModal('expenseModal')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-200 hover:bg-[#154c2a] hover:text-white transition">
+            <i class="fa-solid fa-receipt text-emerald-400 w-5"></i>
+            <span>Expenses</span>
+          </button>
+          <button onclick="openModal('reportsModal')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-200 hover:bg-[#154c2a] hover:text-white transition">
+            <i class="fa-solid fa-chart-pie text-emerald-400 w-5"></i>
+            <span>Reports & Analytics</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Bottom Session Control -->
+      <div class="p-3 border-t border-[#1b502e] space-y-2">
+        <div class="flex items-center gap-2 px-2 py-1 bg-emerald-950/50 rounded-lg text-xs">
+          <div class="w-7 h-7 rounded-full bg-amber-400 text-slate-900 font-extrabold flex items-center justify-center shrink-0" id="userAvatar">K</div>
+          <div class="truncate">
+            <p class="text-white font-bold text-xs truncate" id="userName">Kisan Admin</p>
+            <p class="text-[10px] text-emerald-300 truncate" id="userEmail">kisan@spraycenter.pk</p>
+          </div>
+        </div>
+        <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-red-800/60 hover:text-white transition font-medium text-xs">
+          <i class="fa-solid fa-arrow-right-from-bracket text-red-400"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-7 space-y-6">
+      
+      <!-- Top Bar -->
+      <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleSidebar()" class="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+            <i class="fa-solid fa-bars text-lg"></i>
+          </button>
+          <div>
+            <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">KISSAN SPRAY CENTER</h2>
+            <p class="text-xs text-slate-500 font-semibold tracking-wide mt-0.5">
+              Every farmer's trust <span class="mx-1 text-slate-300">|</span> Pull 88,000 <span class="mx-1 text-slate-300">|</span> Ph: 03426400074
+            </p>
+          </div>
+        </div>
+
+        <!-- Actions & Tools -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button onclick="openModal('saleModal')" class="flex items-center gap-1.5 px-3.5 py-2 bg-[#15803d] hover:bg-[#166534] text-white rounded-lg text-xs font-bold transition shadow-sm">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Sale</span>
+          </button>
+          <button onclick="openModal('purchaseModal')" class="flex items-center gap-1.5 px-3.5 py-2 bg-[#0f766e] hover:bg-[#115e59] text-white rounded-lg text-xs font-bold transition shadow-sm">
+            <i class="fa-solid fa-cart-flatbed"></i>
+            <span>New Purchase</span>
+          </button>
+          <button onclick="exportAllCSV()" title="Export all database collections to CSV" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition shadow-sm">
+            <i class="fa-solid fa-file-excel text-emerald-400"></i>
+            <span>Backup CSV</span>
+          </button>
+          <button onclick="loadSampleDemoData()" title="Populate realistic demo items" class="px-2.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition">
+            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Demo Data
+          </button>
+          <button onclick="resetAllDataToZero()" title="Clear back to zero state" class="px-2.5 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-600 rounded-lg text-xs font-bold transition">
+            <i class="fa-solid fa-rotate-left mr-1"></i> Reset 0
+          </button>
+        </div>
+      </div>
+
+      <!-- Top Expiry Alert Banner -->
+      <div class="bg-white rounded-xl shadow-xs border border-orange-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-red-600 via-red-600 to-amber-600 text-white px-4 py-2.5 flex items-center justify-between">
+          <div class="flex items-center gap-2 font-bold text-sm">
+            <i class="fa-solid fa-triangle-exclamation animate-pulse text-amber-200"></i>
+            <span>Expiry Alerts</span>
+          </div>
+          <span id="expiryBadgeTotal" class="bg-white/20 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-white/30">
+            0 items
+          </span>
+        </div>
+        <div class="p-4 space-y-4">
+          <!-- 4 Category Counter Blocks -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-red-50/50 border border-red-200 rounded-lg p-2.5 text-center">
+              <span class="text-[10px] font-bold tracking-wider text-red-600 uppercase">EXPIRED</span>
+              <p id="cntExpired" class="text-xl font-extrabold text-red-700 mt-0.5">0</p>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-center">
+              <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">&le; 3 DAYS</span>
+              <p id="cnt3Days" class="text-xl font-extrabold text-slate-700 mt-0.5">0</p>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-center">
+              <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">&le; 15 DAYS</span>
+              <p id="cnt15Days" class="text-xl font-extrabold text-slate-700 mt-0.5">0</p>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-center">
+              <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">&le; 30 DAYS</span>
+              <p id="cnt30Days" class="text-xl font-extrabold text-slate-700 mt-0.5">0</p>
+            </div>
+          </div>
+          <!-- Expiry Items List or Empty State -->
+          <div id="expiryItemsList" class="space-y-2">
+            <div class="p-3 bg-emerald-50/50 border border-dashed border-emerald-200 rounded-lg text-center flex items-center justify-center gap-2 text-emerald-800">
+              <i class="fa-regular fa-circle-check text-emerald-600"></i>
+              <span class="text-xs font-semibold">No Expiry Alerts Found. All agrochemicals are well within shelf life.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 Financial Summary Cards -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- TOTAL SALES -->
+        <div class="bg-[#14532d] text-white p-4 rounded-xl shadow-md flex flex-col justify-between relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold tracking-wider uppercase text-emerald-200">TOTAL SALES</span>
+            <div class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+              <i class="fa-solid fa-arrow-trend-up text-emerald-300 text-xs"></i>
+            </div>
+          </div>
+          <div class="mt-4">
+            <span class="text-xs font-medium text-emerald-300">Total Net Income</span>
+            <h3 id="cardTotalSales" class="text-2xl font-black text-white tracking-tight">Rs. 0</h3>
+          </div>
+        </div>
+
+        <!-- TOTAL PURCHASE -->
+        <div class="bg-[#0f766e] text-white p-4 rounded-xl shadow-md flex flex-col justify-between relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold tracking-wider uppercase text-teal-200">TOTAL PURCHASE</span>
+            <div class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+              <i class="fa-solid fa-cart-shopping text-teal-200 text-xs"></i>
+            </div>
+          </div>
+          <div class="mt-4">
+            <span class="text-xs font-medium text-teal-200">Procured Stock Value</span>
+            <h3 id="cardTotalPurchase" class="text-2xl font-black text-white tracking-tight">Rs. 0</h3>
+          </div>
+        </div>
+
+        <!-- RECEIVABLE -->
+        <div class="bg-[#b45309] text-white p-4 rounded-xl shadow-md flex flex-col justify-between relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold tracking-wider uppercase text-amber-200">RECEIVABLE</span>
+            <div class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+              <i class="fa-solid fa-arrow-down text-amber-200 text-xs"></i>
+            </div>
+          </div>
+          <div class="mt-4">
+            <span class="text-xs font-medium text-amber-200">Pending From Farmers</span>
+            <h3 id="cardReceivable" class="text-2xl font-black text-white tracking-tight">Rs. 0</h3>
+          </div>
+        </div>
+
+        <!-- PAYABLE -->
+        <div class="bg-[#dc2626] text-white p-4 rounded-xl shadow-md flex flex-col justify-between relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold tracking-wider uppercase text-red-200">PAYABLE</span>
+            <div class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+              <i class="fa-solid fa-arrow-up text-red-200 text-xs"></i>
+            </div>
+          </div>
+          <div class="mt-4">
+            <span class="text-xs font-medium text-red-200">Pending To Suppliers</span>
+            <h3 id="cardPayable" class="text-2xl font-black text-white tracking-tight">Rs. 0</h3>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stock Alerts & Inventory Health -->
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Low Stock Alert (<5 packs) -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 flex items-center justify-between text-white">
+            <div class="flex items-center gap-2 font-bold text-xs">
+              <i class="fa-solid fa-triangle-exclamation text-amber-200"></i>
+              <span>Low Stock Alert (&lt; 5 packs)</span>
+            </div>
+            <span id="badgeLowStock" class="bg-amber-700/80 px-2 py-0.5 rounded text-[11px] font-bold border border-amber-400/40">0</span>
+          </div>
+          <div id="containerLowStock" class="p-6 text-center text-slate-500 text-xs">
+            <div class="w-10 h-10 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-2">
+              <i class="fa-solid fa-check"></i>
+            </div>
+            <p class="font-semibold text-slate-700">No items running low on stock.</p>
+            <p class="text-[11px] text-slate-400">All inventory is optimal.</p>
+          </div>
+        </div>
+
+        <!-- Out of Stock (0 packs) -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="bg-gradient-to-r from-red-600 to-rose-600 px-4 py-2.5 flex items-center justify-between text-white">
+            <div class="flex items-center gap-2 font-bold text-xs">
+              <i class="fa-solid fa-ban text-red-200"></i>
+              <span>Out of Stock</span>
+            </div>
+            <span id="badgeOutOfStock" class="bg-red-800/80 px-2 py-0.5 rounded text-[11px] font-bold border border-red-400/40">0</span>
+          </div>
+          <div id="containerOutOfStock" class="p-6 text-center text-slate-500 text-xs">
+            <div class="w-10 h-10 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <p class="font-semibold text-slate-700">No out-of-stock items detected.</p>
+            <p class="text-[11px] text-slate-400">Warehouse status normal.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Partners Grid Section (Top Farmers / Top Suppliers) -->
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-5 pb-6">
+        <!-- Top Customers (Farmers) -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs p-4">
+          <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-100 text-slate-800">
+            <div class="flex items-center gap-2">
+              <div class="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
+                <i class="fa-solid fa-users text-sm"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-xs text-slate-900">Top Customers (Farmers)</h3>
+                <p class="text-[10px] text-slate-500">Highest ledger activity & balances</p>
+              </div>
+            </div>
+            <button onclick="openModal('farmerLedgerModal')" class="text-emerald-700 hover:text-emerald-800 font-bold text-xs">
+              View All <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+          <div id="topCustomersList" class="space-y-2">
+            <div class="py-8 px-4 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+              <i class="fa-solid fa-user-slash text-slate-300 text-2xl mb-2"></i>
+              <p class="text-xs font-semibold text-slate-600">No customer sales or ledger transactions recorded yet.</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">Click "+ New Sale" to log transactions.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Suppliers -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs p-4">
+          <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-100 text-slate-800">
+            <div class="flex items-center gap-2">
+              <div class="p-1.5 rounded-lg bg-teal-50 text-teal-700">
+                <i class="fa-solid fa-truck-field text-sm"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-xs text-slate-900">Top Suppliers</h3>
+                <p class="text-[10px] text-slate-500">Agrochemical & Seed Distributors</p>
+              </div>
+            </div>
+            <button onclick="openModal('supplierLedgerModal')" class="text-teal-700 hover:text-teal-800 font-bold text-xs">
+              View All <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+          <div id="topSuppliersList" class="space-y-2">
+            <div class="py-8 px-4 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+              <i class="fa-solid fa-building-circle-exclamation text-slate-300 text-2xl mb-2"></i>
+              <p class="text-xs font-semibold text-slate-600">No supplier purchase records found.</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">Click "+ New Purchase" to record inventory arrival.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. NEW SALE (POS) POPUP -->
+  <div id="saleModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 max-h-[95vh] flex flex-col">
+      <div class="bg-[#14532d] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-cart-shopping text-emerald-300"></i>
+          <div>
+            <h3 class="text-sm md:text-base font-bold leading-tight">New Sale (Point of Sale)</h3>
+            <p class="text-[11px] text-emerald-200">Kissan Spray Center • Pull 88,000</p>
+          </div>
+        </div>
+        <button onclick="closeModal('saleModal')" class="text-emerald-200 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <form id="saleForm" onsubmit="submitSale(event)" class="p-5 space-y-4 text-xs overflow-y-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Farmer Name *</label>
+            <input type="text" id="saleFarmerName" placeholder="e.g. Haji Muhammad Nawaz" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Location / Village *</label>
+            <input type="text" id="saleLocation" value="Pull 88,000" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Farmer Mobile (for WhatsApp Receipt)</label>
+            <input type="text" id="saleFarmerPhone" placeholder="03426400074" class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Select Product *</label>
+            <select id="saleProductSelect" onchange="onSaleProductChange()" class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600">
+              <option value="">-- Choose or type custom below --</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Product Name</label>
+            <input type="text" id="saleProductName" placeholder="Product name" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Batch Number</label>
+            <input type="text" id="saleBatchNo" placeholder="BAT-2026-X" class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Expiry Date</label>
+            <input type="date" id="saleExpiryDate" class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Quantity *</label>
+            <input type="number" id="saleQty" min="1" value="1" oninput="calcSaleTotals()" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600 font-mono">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Sale Price (Rs.) *</label>
+            <input type="number" id="salePrice" min="0" value="0" oninput="calcSaleTotals()" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600 font-mono">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Payment Type *</label>
+            <select id="salePaymentType" onchange="onPaymentTypeChange()" class="w-full text-xs rounded-lg border-slate-300 focus:ring-emerald-600 font-semibold">
+              <option value="Cash">Cash (Naqad)</option>
+              <option value="Credit">Credit (Udhaar)</option>
+            </select>
+          </div>
+        </div>
+        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-600 uppercase">Gross Total Bill:</span>
+            <span id="saleTotalDisplay" class="font-black text-sm text-emerald-800 font-mono">Rs. 0</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Cash Received (Rs.)</label>
+              <input type="number" id="saleCashReceived" min="0" value="0" oninput="calcSaleTotals()" class="w-full text-xs rounded-lg border-slate-300 font-mono text-emerald-700 font-bold">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Udhaar / Credit Balance (Rs.)</label>
+              <input type="number" id="saleCreditDue" readonly class="w-full text-xs rounded-lg bg-amber-50 border-amber-300 text-amber-800 font-bold font-mono">
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('saleModal')" class="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+          <button type="submit" class="px-5 py-2 font-bold text-white bg-[#15803d] hover:bg-[#166534] rounded-lg shadow-sm">Save & Print/Log</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. NEW PURCHASE / INVENTORY POPUP -->
+  <div id="purchaseModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 max-h-[95vh] flex flex-col">
+      <div class="bg-[#0f766e] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-truck-ramp-box text-teal-200"></i>
+          <div>
+            <h3 class="text-sm md:text-base font-bold leading-tight">New Purchase / Inventory Entry</h3>
+            <p class="text-[11px] text-teal-200">Procure stock from manufacturer/distributor</p>
+          </div>
+        </div>
+        <button onclick="closeModal('purchaseModal')" class="text-teal-200 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <form id="purchaseForm" onsubmit="submitPurchase(event)" class="p-5 space-y-4 text-xs overflow-y-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Supplier Company Name *</label>
+            <input type="text" id="purchSupplier" list="supplierSuggestions" placeholder="e.g. Engro Fertilizers Ltd / Suncrop" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-teal-600">
+            <datalist id="supplierSuggestions">
+              <option value="Engro Fertilizers Ltd">
+              <option value="Suncrop Pesticides">
+              <option value="Satallion Life Sciences Pvt.ltd">
+              <option value="Ag Pharma">
+              <option value="FMC United Chemicals">
+              <option value="Syngenta Crop Protection">
+            </datalist>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Category *</label>
+            <select id="purchCategory" class="w-full text-xs rounded-lg border-slate-300 focus:ring-teal-600 font-semibold">
+              <option value="Pesticide">Pesticide (Kira Mar)</option>
+              <option value="Fertilizer">Fertilizer (Khaad)</option>
+              <option value="Seed">Seed (Beej)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Product Name *</label>
+            <input type="text" id="purchProduct" placeholder="e.g. UREA 50 KG / YARKER" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-teal-600">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Batch Number *</label>
+            <input type="text" id="purchBatch" placeholder="B-8801" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-teal-600">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Expiry Date *</label>
+            <input type="date" id="purchExpiry" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-teal-600">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Purchase Price (Per Pack Rs.) *</label>
+            <input type="number" id="purchCostPrice" min="0" value="0" oninput="calcPurchTotals()" required class="w-full text-xs rounded-lg border-slate-300 font-mono">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Sale Price (Per Pack Rs.) *</label>
+            <input type="number" id="purchSalePrice" min="0" value="0" required class="w-full text-xs rounded-lg border-slate-300 font-mono">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Stock Quantity (Packs) *</label>
+            <input type="number" id="purchStockQty" min="1" value="10" oninput="calcPurchTotals()" required class="w-full text-xs rounded-lg border-slate-300 font-mono">
+          </div>
+        </div>
+        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Total Bill (Rs.)</label>
+              <input type="number" id="purchTotalBill" readonly class="w-full text-xs rounded-lg bg-slate-100 font-mono font-bold text-slate-900">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Amount Paid (Rs.) *</label>
+              <input type="number" id="purchPaid" min="0" value="0" oninput="calcPurchTotals()" required class="w-full text-xs rounded-lg border-slate-300 font-mono text-teal-700 font-bold">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Balance Payable (Rs.)</label>
+              <input type="number" id="purchBalancePayable" readonly class="w-full text-xs rounded-lg bg-red-50 border-red-300 text-red-800 font-bold font-mono">
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('purchaseModal')" class="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+          <button type="submit" class="px-5 py-2 font-bold text-white bg-[#0f766e] hover:bg-[#115e59] rounded-lg shadow-sm">Save to Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. FARMER CREDIT / PAYMENT RECOVERY POPUP -->
+  <div id="farmerPaymentModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+      <div class="bg-[#b45309] text-white px-5 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-hand-holding-dollar text-amber-200"></i>
+          <div>
+            <h3 class="text-base font-bold leading-tight">Farmer Payment / Recovery</h3>
+            <p class="text-[11px] text-amber-200">Record cash recovery towards credit balance</p>
+          </div>
+        </div>
+        <button onclick="closeModal('farmerPaymentModal')" class="text-amber-200 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <form id="farmerPaymentForm" onsubmit="submitFarmerRecovery(event)" class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Select Farmer *</label>
+          <select id="recFarmerSelect" onchange="onRecFarmerChange()" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-amber-600">
+            <option value="">-- Choose Farmer --</option>
+          </select>
+        </div>
+        <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 flex justify-between items-center">
+          <span class="font-bold text-amber-900">Current Outstanding Udhaar:</span>
+          <span id="recFarmerBalance" class="font-black text-amber-700 font-mono text-sm">Rs. 0</span>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Recovery Amount Paid (Rs.) *</label>
+          <input type="number" id="recAmount" min="1" required class="w-full text-xs rounded-lg border-slate-300 font-mono font-bold text-emerald-700 text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Payment Date</label>
+          <input type="date" id="recDate" class="w-full text-xs rounded-lg border-slate-300">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Notes / Remarks</label>
+          <input type="text" id="recNotes" placeholder="e.g. Cash received at shop / Bank transfer" class="w-full text-xs rounded-lg border-slate-300">
+        </div>
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('farmerPaymentModal')" class="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+          <button type="submit" class="px-5 py-2 font-bold text-white bg-[#b45309] hover:bg-[#92400e] rounded-lg shadow-sm">Save Recovery</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. EXPENSE ENTRY POPUP -->
+  <div id="expenseModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+      <div class="bg-slate-800 text-white px-5 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-receipt text-slate-300"></i>
+          <div>
+            <h3 class="text-base font-bold leading-tight">Add Shop Expense</h3>
+            <p class="text-[11px] text-slate-300">Daily shop operating overheads</p>
+          </div>
+        </div>
+        <button onclick="closeModal('expenseModal')" class="text-slate-300 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <form id="expenseForm" onsubmit="submitExpense(event)" class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Category *</label>
+          <select id="expCategory" required class="w-full text-xs rounded-lg border-slate-300 focus:ring-slate-700 font-semibold">
+            <option value="Electricity">Electricity Bill (Bijli)</option>
+            <option value="Tea">Tea / Refreshments (Chai)</option>
+            <option value="Rent">Shop Rent (Kiraya)</option>
+            <option value="Freight">Freight / Carriage (Kiraya Bilty)</option>
+            <option value="Staff">Staff Salary / Wage</option>
+            <option value="Maintenance">Shop Maintenance / Misc</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Expense Amount (Rs.) *</label>
+          <input type="number" id="expAmount" min="1" required class="w-full text-xs rounded-lg border-slate-300 font-mono font-bold text-red-600 text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Date</label>
+          <input type="date" id="expDate" class="w-full text-xs rounded-lg border-slate-300">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Description / Bill Memo</label>
+          <input type="text" id="expNote" placeholder="e.g. Month electric bill / Loader delivery charges" class="w-full text-xs rounded-lg border-slate-300">
+        </div>
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('expenseModal')" class="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+          <button type="submit" class="px-5 py-2 font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm">Record Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. INVENTORY & BATCH MANAGEMENT MODAL -->
+  <div id="inventoryModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden border border-slate-200 max-h-[95vh] flex flex-col">
+      <div class="bg-[#143d22] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-boxes-stacked text-amber-300"></i>
+          <div>
+            <h3 class="text-base font-bold leading-tight">Inventory & Batch Management</h3>
+            <p class="text-[11px] text-emerald-200">Stock levels, active batches, and expiry monitor</p>
+          </div>
+        </div>
+        <button onclick="closeModal('inventoryModal')" class="text-emerald-200 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50 shrink-0">
+        <div class="relative flex-1 min-w-[200px]">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+          <input type="text" id="inventorySearch" oninput="renderInventoryTable()" placeholder="Search product name, category, or batch..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border-slate-300">
+        </div>
+        <button onclick="openModal('purchaseModal')" class="px-3 py-1.5 bg-[#0f766e] text-white rounded-lg text-xs font-bold hover:bg-[#115e59]">
+          <i class="fa-solid fa-plus mr-1"></i> Add Stock
+        </button>
+      </div>
+      <div class="overflow-y-auto flex-1 p-4">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 uppercase font-bold text-[10px]">
+              <th class="p-2.5">Product</th>
+              <th class="p-2.5">Category</th>
+              <th class="p-2.5">Batch</th>
+              <th class="p-2.5">Stock</th>
+              <th class="p-2.5">Purchase (Rs.)</th>
+              <th class="p-2.5">Sale (Rs.)</th>
+              <th class="p-2.5">Expiry Date</th>
+              <th class="p-2.5">Status</th>
+              <th class="p-2.5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTableBody" class="divide-y divide-slate-100">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. FARMER LEDGERS MODAL -->
+  <div id="farmerLedgerModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-200 max-h-[95vh] flex flex-col">
+      <div class="bg-[#14532d] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-address-book text-amber-300"></i>
+          <div>
+            <h3 class="text-base font-bold leading-tight">Farmer Ledgers & Credit Balances</h3>
+            <p class="text-[11px] text-emerald-200">Village: Pull 88,000 | Outstanding Udhaar & WhatsApp Receipts</p>
+          </div>
+        </div>
+        <button onclick="closeModal('farmerLedgerModal')" class="text-emerald-200 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+        <div class="relative flex-1 max-w-sm">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+          <input type="text" id="farmerSearch" oninput="renderFarmerLedgers()" placeholder="Search farmer name or phone..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border-slate-300">
+        </div>
+        <button onclick="openModal('farmerPaymentModal')" class="px-3 py-1.5 bg-[#b45309] text-white rounded-lg text-xs font-bold hover:bg-[#92400e]">
+          <i class="fa-solid fa-hand-holding-dollar mr-1"></i> Record Recovery
+        </button>
+      </div>
+      <div class="overflow-y-auto flex-1 p-4">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 uppercase font-bold text-[10px]">
+              <th class="p-2.5">Farmer Name</th>
+              <th class="p-2.5">Location</th>
+              <th class="p-2.5">Phone</th>
+              <th class="p-2.5">Total Purchases (Rs.)</th>
+              <th class="p-2.5">Outstanding Udhaar (Rs.)</th>
+              <th class="p-2.5 text-right">Receipt / WhatsApp</th>
+            </tr>
+          </thead>
+          <tbody id="farmerTableBody" class="divide-y divide-slate-100">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. SUPPLIER LEDGERS MODAL -->
+  <div id="supplierLedgerModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-200 max-h-[95vh] flex flex-col">
+      <div class="bg-[#0f766e] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-building text-teal-200"></i>
+          <div>
+            <h3 class="text-base font-bold leading-tight">Supplier Ledgers & Company Payables</h3>
+            <p class="text-[11px] text-teal-200">Track payables to Ag Pharma, Suncrop, Engro, etc.</p>
+          </div>
+        </div>
+        <button onclick="closeModal('supplierLedgerModal')" class="text-teal-200 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="overflow-y-auto flex-1 p-4">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 uppercase font-bold text-[10px]">
+              <th class="p-2.5">Company Supplier</th>
+              <th class="p-2.5">Total Procured (Rs.)</th>
+              <th class="p-2.5">Amount Paid (Rs.)</th>
+              <th class="p-2.5">Outstanding Payable (Rs.)</th>
+              <th class="p-2.5 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="supplierTableBody" class="divide-y divide-slate-100">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. REPORTS & ANALYTICS MODAL -->
+  <div id="reportsModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200 max-h-[95vh] flex flex-col">
+      <div class="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-chart-line text-emerald-400"></i>
+          <div>
+            <h3 class="text-base font-bold leading-tight">Financial Reports & Profit Calculator</h3>
+            <p class="text-[11px] text-slate-400">Sales, Cost of Goods Sold, Expenses, and Net Profit</p>
+          </div>
+        </div>
+        <button onclick="closeModal('reportsModal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-6 overflow-y-auto text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <span class="text-[10px] font-bold text-emerald-700 uppercase">Gross Revenue (Sales)</span>
+            <p id="repGrossSales" class="text-xl font-black text-emerald-900 mt-1">Rs. 0</p>
+          </div>
+          <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+            <span class="text-[10px] font-bold text-slate-500 uppercase">Total Shop Expenses</span>
+            <p id="repTotalExpenses" class="text-xl font-black text-slate-800 mt-1">Rs. 0</p>
+          </div>
+          <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <span class="text-[10px] font-bold text-blue-700 uppercase">Net Calculated Profit</span>
+            <p id="repNetProfit" class="text-xl font-black text-blue-900 mt-1">Rs. 0</p>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-800 mb-2">Recent Expense Summary</h4>
+          <div id="repExpenseList" class="space-y-1.5 max-h-48 overflow-y-auto">
+            <p class="text-slate-400 italic">No expenses logged yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700">
+    <div id="toastIcon" class="w-7 h-7 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0">✓</div>
+    <div>
+      <h4 id="toastTitle" class="text-xs font-bold leading-tight">Notification</h4>
+      <p id="toastMessage" class="text-[11px] text-slate-300">Action completed.</p>
+    </div>
+  </div>
+
+  <!-- Application Logic & Firebase Configuration -->
+  <script src="/src/app.js"></script>
+</body>
+</html>
