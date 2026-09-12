@@ -1,6 +1,6 @@
 {
-  "name": "Kissan Spray Center",
-  "description": "Enterprise Agrochemical ERP and Point of Sale web application for Kissan Spray Center (Pull 88,000) with POS, inventory, farmer credit ledgers, supplier payables, and expiry tracking.",
+  "name": "Kissan Agro Traders",
+  "description": "Enterprise Agrochemical ERP and Point of Sale web application for Kissan Agro Traders (Pull 88,000 | Contact: 03426400074) with full-page section views, POS, inventory, farmer credit ledgers, cash flow, and reports.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

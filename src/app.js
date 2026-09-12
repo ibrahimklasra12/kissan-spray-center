@@ -35,24 +35,52 @@ try {
 }
 
 // =========================================================================
-// 2. DATA STATE (COLLECTIONS: products, sales, farmers, suppliers, expenses)
-// ALL COUNTERS & TABLES START AT ZERO (0) / EMPTY STATE
+// 2. DATA STATE & STORAGE KEYS (100% Fresh Zero-Meter ERP Data Structures)
+// Inventory, Customers, Suppliers, Invoices, Expenses, Cash Flow, Banks = []
 // =========================================================================
 const STORAGE_KEYS = {
-  PRODUCTS: 'ksc_products_v1',
-  SALES: 'ksc_sales_v1',
-  FARMERS: 'ksc_farmers_v1',
-  SUPPLIERS: 'ksc_suppliers_v1',
-  EXPENSES: 'ksc_expenses_v1',
-  AUTH: 'ksc_user_auth_v1'
+  PRODUCTS: 'kat_products_v1',
+  SALES: 'kat_sales_v1',
+  FARMERS: 'kat_farmers_v1',
+  SUPPLIERS: 'kat_suppliers_v1',
+  EXPENSES: 'kat_expenses_v1',
+  EMPLOYEES: 'kat_employees_v1',
+  BANKS: 'kat_banks_v1',
+  BANK_TRANSACTIONS: 'kat_bank_tx_v1',
+  CASH_TRANSACTIONS: 'kat_cash_tx_v1',
+  RETURNS: 'kat_returns_v1',
+  AUTH: 'kat_user_auth_v1'
 };
+
+// Zero-meter fresh initialization: clears all dummy entries and legacy localStorage keys
+(function clearOldDummyData() {
+  const ZERO_METER_KEY = 'kat_zero_meter_clean_v1';
+  if (localStorage.getItem(ZERO_METER_KEY) !== 'done') {
+    const keysToRemove = [
+      'ksc_products_v1', 'ksc_sales_v1', 'ksc_farmers_v1', 'ksc_suppliers_v1',
+      'ksc_expenses_v1', 'ksc_employees_v1', 'ksc_banks_v1', 'ksc_bank_tx_v1',
+      'ksc_cash_tx_v1', 'ksc_returns_v1', 'ksc_clean_zero_v1', 'ksc_clean_zero_v2',
+      'kissan_agro_zero_meter_v1',
+      'kat_products_v1', 'kat_sales_v1', 'kat_farmers_v1', 'kat_suppliers_v1',
+      'kat_expenses_v1', 'kat_employees_v1', 'kat_banks_v1', 'kat_bank_tx_v1',
+      'kat_cash_tx_v1', 'kat_returns_v1'
+    ];
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    localStorage.setItem(ZERO_METER_KEY, 'done');
+  }
+})();
 
 let appData = {
   products: [],
   sales: [],
   farmers: [],
   suppliers: [],
-  expenses: []
+  expenses: [],
+  employees: [],
+  banks: [],
+  bankTransactions: [],
+  cashTransactions: [],
+  returns: []
 };
 
 let currentUser = null;
@@ -63,22 +91,382 @@ function formatPKR(val) {
   return 'Rs. ' + num.toLocaleString('en-US');
 }
 
-// Toast helper
+// Toast helper (Guaranteed 3-Second Auto-Dismiss)
+let toastTimer = null;
 function showToast(title, message, isSuccess = true) {
   const toast = document.getElementById('toast');
   const icon = document.getElementById('toastIcon');
   if (!toast) return;
-  document.getElementById('toastTitle').innerText = title;
-  document.getElementById('toastMessage').innerText = message;
-  icon.className = isSuccess 
-    ? 'w-7 h-7 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0'
-    : 'w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-xs shrink-0';
-  icon.innerText = isSuccess ? '✓' : '!';
+  const tTitle = document.getElementById('toastTitle');
+  if (tTitle) tTitle.innerText = title;
+  const tMsg = document.getElementById('toastMessage');
+  if (tMsg) tMsg.innerText = message || '';
+  if (icon) {
+    icon.className = isSuccess 
+      ? 'w-7 h-7 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0'
+      : 'w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-xs shrink-0';
+    icon.innerText = isSuccess ? '✓' : '!';
+  }
+  if (toastTimer) {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
   toast.classList.remove('translate-y-20', 'opacity-0');
-  setTimeout(() => {
+  toastTimer = setTimeout(() => {
     toast.classList.add('translate-y-20', 'opacity-0');
+    toastTimer = null;
   }, 3000);
 }
+window.showToast = showToast;
+
+// Browser-native Web Audio API / Synthesis Feedback (Zero heavy external assets)
+let erpAudioCtx = null;
+function getAudioContext() {
+  if (!erpAudioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      erpAudioCtx = new AudioContextClass();
+    }
+  }
+  if (erpAudioCtx && erpAudioCtx.state === 'suspended') {
+    erpAudioCtx.resume().catch(() => {});
+  }
+  return erpAudioCtx;
+}
+
+function playAudioFeedback(type = 'add') {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    if (type === 'login') {
+      // Pleasant 4-note ascending major chime (C5 -> E5 -> G5 -> C6)
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+        gain.gain.setValueAtTime(0, now + idx * 0.08);
+        gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.08 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.32);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.35);
+      });
+
+      // Browser speech synthesis greeting
+      if (window.speechSynthesis) {
+        try {
+          const utter = new SpeechSynthesisUtterance('Welcome to Kissan Agro Traders');
+          utter.rate = 1.05;
+          utter.pitch = 1.1;
+          window.speechSynthesis.speak(utter);
+        } catch (e) {}
+      }
+    } else if (type === 'add') {
+      // Crisp, pleasant dual-tone success chime (F5 698Hz -> C6 1046Hz)
+      [698.46, 1046.50].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+
+        gain.gain.setValueAtTime(0, now + idx * 0.07);
+        gain.gain.linearRampToValueAtTime(0.2, now + idx * 0.07 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.28);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + idx * 0.07);
+        osc.stop(now + idx * 0.07 + 0.3);
+      });
+    } else if (type === 'delete') {
+      // Distinct downward double-tone deletion chime (A4 440Hz -> E4 329Hz -> A3 220Hz)
+      [440, 329.63, 220].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+
+        gain.gain.setValueAtTime(0, now + idx * 0.09);
+        gain.gain.linearRampToValueAtTime(0.22, now + idx * 0.09 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.26);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + idx * 0.09);
+        osc.stop(now + idx * 0.09 + 0.29);
+      });
+    } else if (type === 'error') {
+      // Low dual buzz tone for denial
+      [220, 180].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+
+        gain.gain.setValueAtTime(0, now + idx * 0.12);
+        gain.gain.linearRampToValueAtTime(0.15, now + idx * 0.12 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.18);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + idx * 0.12);
+        osc.stop(now + idx * 0.12 + 0.2);
+      });
+    }
+  } catch (err) {
+    console.warn('Audio feedback failed:', err);
+  }
+}
+window.playAudioFeedback = playAudioFeedback;
+
+// =========================================================================
+// DOUBLE PIN VERIFICATION FOR DELETION (PIN: 1234)
+// =========================================================================
+let pendingDeleteTarget = null; // { moduleType, recordId, itemName }
+
+function triggerProtectedDelete(moduleType, recordId, itemName = '') {
+  pendingDeleteTarget = { moduleType, recordId, itemName };
+
+  const summaryEl1 = document.getElementById('deleteItemSummary');
+  if (summaryEl1) {
+    summaryEl1.innerText = itemName ? `Item: ${itemName}` : `Record ID: ${recordId}`;
+  }
+
+  const pinInp1 = document.getElementById('deletePinInput1');
+  if (pinInp1) pinInp1.value = '';
+
+  const errEl1 = document.getElementById('deletePinError1');
+  if (errEl1) errEl1.classList.add('hidden');
+
+  openModal('deletePinStep1Modal');
+  setTimeout(() => {
+    if (pinInp1) pinInp1.focus();
+  }, 100);
+}
+window.triggerProtectedDelete = triggerProtectedDelete;
+
+function submitDeletePinStep1(e) {
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+
+  const pinInput = document.getElementById('deletePinInput1');
+  const enteredPin = (pinInput?.value || '').trim();
+  const errorEl = document.getElementById('deletePinError1');
+
+  if (enteredPin !== '1234') {
+    if (errorEl) errorEl.classList.remove('hidden');
+    playAudioFeedback('error');
+    showToast('Deletion Denied', 'Incorrect Security PIN! Deletion Denied.', false);
+    return;
+  }
+
+  // Correct PIN 1234: Advance to Step 2 confirmation
+  if (errorEl) errorEl.classList.add('hidden');
+  closeModal('deletePinStep1Modal');
+
+  const summaryEl2 = document.getElementById('deleteItemSummary2');
+  if (summaryEl2 && pendingDeleteTarget) {
+    summaryEl2.innerText = pendingDeleteTarget.itemName ? `Item: ${pendingDeleteTarget.itemName}` : `Record ID: ${pendingDeleteTarget.recordId}`;
+  }
+
+  const pinInp2 = document.getElementById('deletePinInput2');
+  if (pinInp2) pinInp2.value = '';
+
+  const errEl2 = document.getElementById('deletePinError2');
+  if (errEl2) errEl2.classList.add('hidden');
+
+  openModal('deletePinStep2Modal');
+  setTimeout(() => {
+    if (pinInp2) pinInp2.focus();
+  }, 100);
+}
+window.submitDeletePinStep1 = submitDeletePinStep1;
+
+function submitDeletePinStep2(e) {
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+
+  const pinInput = document.getElementById('deletePinInput2');
+  const enteredPin = (pinInput?.value || '').trim();
+  const errorEl = document.getElementById('deletePinError2');
+
+  if (enteredPin !== '1234') {
+    if (errorEl) errorEl.classList.remove('hidden');
+    playAudioFeedback('error');
+    showToast('Deletion Denied', 'Incorrect Security PIN! Deletion Denied.', false);
+    return;
+  }
+
+  // Double PIN verified (1234 entered both times): Permanently remove from localStorage
+  if (!pendingDeleteTarget) {
+    closeModal('deletePinStep2Modal');
+    return;
+  }
+
+  const { moduleType, recordId } = pendingDeleteTarget;
+
+  try {
+    switch (moduleType) {
+      case 'product':
+        appData.products = appData.products.filter(p => String(p.id) !== String(recordId));
+        saveLocalData('products');
+        break;
+      case 'customer':
+      case 'farmer':
+        appData.farmers = appData.farmers.filter(f => String(f.id) !== String(recordId));
+        saveLocalData('farmers');
+        break;
+      case 'supplier':
+        appData.suppliers = appData.suppliers.filter(s => String(s.id) !== String(recordId));
+        saveLocalData('suppliers');
+        break;
+      case 'sale':
+        appData.sales = appData.sales.filter(s => String(s.id || s.invoiceId || s.invoiceNo) !== String(recordId));
+        saveLocalData('sales');
+        break;
+      case 'expense':
+        appData.expenses = appData.expenses.filter(e => String(e.id) !== String(recordId));
+        saveLocalData('expenses');
+        break;
+      case 'cashTx':
+        appData.cashTransactions = appData.cashTransactions.filter(c => String(c.id) !== String(recordId));
+        saveLocalData('cashTransactions');
+        break;
+      case 'bank':
+        appData.banks = appData.banks.filter(b => String(b.id) !== String(recordId));
+        saveLocalData('banks');
+        break;
+      case 'bankTx':
+        appData.bankTransactions = appData.bankTransactions.filter(t => String(t.id) !== String(recordId));
+        saveLocalData('bankTransactions');
+        break;
+      case 'return':
+        appData.returns = appData.returns.filter(r => String(r.id) !== String(recordId));
+        saveLocalData('returns');
+        break;
+      case 'employee':
+        appData.employees = appData.employees.filter(emp => String(emp.id) !== String(recordId));
+        saveLocalData('employees');
+        break;
+      default:
+        console.warn('Unknown moduleType for deletion:', moduleType);
+    }
+  } catch (err) {
+    console.error('Deletion error:', err);
+  }
+
+  closeModal('deletePinStep2Modal');
+  pendingDeleteTarget = null;
+
+  // Dynamically refresh the dashboard stats/totals and all active view tables
+  refreshAllERPViews();
+
+  // Distinct deletion audio confirmation chime
+  playAudioFeedback('delete');
+
+  // Prominent green 3-second auto-dismiss popup
+  showToast('Successfully Deleted!', 'Record permanently deleted from ERP.', true);
+}
+window.submitDeletePinStep2 = submitDeletePinStep2;
+
+function cancelProtectedDelete() {
+  closeModal('deletePinStep1Modal');
+  closeModal('deletePinStep2Modal');
+  pendingDeleteTarget = null;
+}
+window.cancelProtectedDelete = cancelProtectedDelete;
+
+function refreshAllERPViews() {
+  if (typeof updateDashboard === 'function') updateDashboard();
+  if (typeof renderInventoryTable === 'function') renderInventoryTable();
+  if (typeof renderFarmerLedgers === 'function') renderFarmerLedgers();
+  if (typeof renderSupplierLedgers === 'function') renderSupplierLedgers();
+  if (typeof renderSalesHistoryTable === 'function') renderSalesHistoryTable();
+  if (typeof updateProfitReport === 'function') updateProfitReport();
+
+  // Secondary views if rendered or open
+  if (typeof renderInventoryViewTable === 'function') renderInventoryViewTable();
+  if (typeof renderPurchaseHistoryViewTable === 'function') renderPurchaseHistoryViewTable();
+  if (typeof renderSuppliersViewTable === 'function') renderSuppliersViewTable();
+  if (typeof renderCustomersViewTable === 'function') renderCustomersViewTable();
+  if (typeof renderSalesViewTable === 'function') renderSalesViewTable();
+  if (typeof renderExpensesViewTable === 'function') renderExpensesViewTable();
+  if (typeof renderEmployeesViewTable === 'function') renderEmployeesViewTable();
+  if (typeof renderCashFlowView === 'function') renderCashFlowView();
+  if (typeof renderBanksView === 'function') renderBanksView();
+  if (typeof renderReturnsViewTable === 'function') renderReturnsViewTable();
+}
+window.refreshAllERPViews = refreshAllERPViews;
+
+// Individual module delete entry points
+function deleteProduct(id) {
+  const p = appData.products.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('product', id, p ? p.name : 'Product');
+}
+window.deleteProduct = deleteProduct;
+
+function deleteFarmer(id) {
+  const f = appData.farmers.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('customer', id, f ? f.name : 'Customer Profile');
+}
+window.deleteFarmer = deleteFarmer;
+
+function deleteSupplier(id) {
+  const s = appData.suppliers.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('supplier', id, s ? s.name : 'Supplier Company');
+}
+window.deleteSupplier = deleteSupplier;
+
+function deleteSale(id) {
+  const s = appData.sales.find(item => String(item.id || item.invoiceId || item.invoiceNo) === String(id));
+  triggerProtectedDelete('sale', id, s ? (s.invoiceNo || s.invoiceId || s.farmerName || 'Sale Invoice') : 'Sale Record');
+}
+window.deleteSale = deleteSale;
+
+function deleteExpense(id) {
+  const e = appData.expenses.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('expense', id, e ? `${e.category} (${formatPKR(e.amount)})` : 'Expense Entry');
+}
+window.deleteExpense = deleteExpense;
+
+function deleteCashTx(id) {
+  const c = appData.cashTransactions.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('cashTx', id, c ? `${c.flow}: ${c.category || c.source || ''} (${formatPKR(c.amount)})` : 'Cash Flow Entry');
+}
+window.deleteCashTx = deleteCashTx;
+
+function deleteBank(id) {
+  const b = appData.banks.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('bank', id, b ? `${b.name} (${b.accNo})` : 'Bank Account');
+}
+window.deleteBank = deleteBank;
+
+function deleteBankTx(id) {
+  const t = appData.bankTransactions.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('bankTx', id, t ? `${t.type} (${formatPKR(t.amount)})` : 'Bank Transaction');
+}
+window.deleteBankTx = deleteBankTx;
+
+function deleteReturn(id) {
+  const r = appData.returns.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('return', id, r ? `${r.type} - ${r.product}` : 'Return Item');
+}
+window.deleteReturn = deleteReturn;
+
+function deleteEmployee(id) {
+  const emp = appData.employees.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('employee', id, emp ? emp.name : 'Employee');
+}
+window.deleteEmployee = deleteEmployee;
 
 // =========================================================================
 // 3. PERSISTENCE & STORAGE HELPERS (Firestore + LocalStorage fallback)
@@ -89,17 +477,30 @@ function loadLocalData() {
   appData.farmers = JSON.parse(localStorage.getItem(STORAGE_KEYS.FARMERS) || '[]');
   appData.suppliers = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUPPLIERS) || '[]');
   appData.expenses = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES) || '[]');
+  appData.employees = JSON.parse(localStorage.getItem(STORAGE_KEYS.EMPLOYEES) || '[]');
+  appData.banks = JSON.parse(localStorage.getItem(STORAGE_KEYS.BANKS) || '[]');
+  appData.bankTransactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.BANK_TRANSACTIONS) || '[]');
+  appData.cashTransactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TRANSACTIONS) || '[]');
+  appData.returns = JSON.parse(localStorage.getItem(STORAGE_KEYS.RETURNS) || '[]');
 }
 
 function saveLocalData(collectionKey) {
   if (collectionKey) {
-    localStorage.setItem(STORAGE_KEYS[collectionKey.toUpperCase()], JSON.stringify(appData[collectionKey]));
+    const k = collectionKey.toUpperCase();
+    if (STORAGE_KEYS[k]) {
+      localStorage.setItem(STORAGE_KEYS[k], JSON.stringify(appData[collectionKey]));
+    }
   } else {
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(appData.products));
     localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify(appData.sales));
     localStorage.setItem(STORAGE_KEYS.FARMERS, JSON.stringify(appData.farmers));
     localStorage.setItem(STORAGE_KEYS.SUPPLIERS, JSON.stringify(appData.suppliers));
     localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(appData.expenses));
+    localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(appData.employees));
+    localStorage.setItem(STORAGE_KEYS.BANKS, JSON.stringify(appData.banks));
+    localStorage.setItem(STORAGE_KEYS.BANK_TRANSACTIONS, JSON.stringify(appData.bankTransactions));
+    localStorage.setItem(STORAGE_KEYS.CASH_TRANSACTIONS, JSON.stringify(appData.cashTransactions));
+    localStorage.setItem(STORAGE_KEYS.RETURNS, JSON.stringify(appData.returns));
   }
 }
 
@@ -302,6 +703,10 @@ function openModal(id) {
     renderSupplierLedgers();
   } else if (id === 'reportsModal') {
     renderReports();
+  } else if (id === 'excelExportModal') {
+    updateExcelExportCounters();
+  } else if (id === 'salesHistoryModal') {
+    renderSalesHistoryTable();
   }
 }
 
@@ -329,7 +734,7 @@ function toggleModal(id) {
 }
 
 window.addEventListener('click', (e) => {
-  ['saleModal', 'purchaseModal', 'farmerPaymentModal', 'expenseModal', 'inventoryModal', 'farmerLedgerModal', 'supplierLedgerModal', 'reportsModal'].forEach(id => {
+  ['saleModal', 'purchaseModal', 'farmerPaymentModal', 'expenseModal', 'inventoryModal', 'farmerLedgerModal', 'supplierLedgerModal', 'reportsModal', 'excelExportModal', 'salesHistoryModal'].forEach(id => {
     const modal = document.getElementById(id);
     if (e.target === modal) closeModal(id);
   });
@@ -368,10 +773,14 @@ function updateDashboard() {
     totalPayable += Number(sup.payableDue || 0);
   });
 
-  document.getElementById('cardTotalSales').innerText = formatPKR(totalSales);
-  document.getElementById('cardTotalPurchase').innerText = formatPKR(totalPurchase);
-  document.getElementById('cardReceivable').innerText = formatPKR(totalReceivable);
-  document.getElementById('cardPayable').innerText = formatPKR(totalPayable);
+  const elTotalSales = document.getElementById('cardTotalSales');
+  if (elTotalSales) elTotalSales.innerText = formatPKR(totalSales);
+  const elTotalPurchase = document.getElementById('cardTotalPurchase');
+  if (elTotalPurchase) elTotalPurchase.innerText = formatPKR(totalPurchase);
+  const elReceivable = document.getElementById('cardReceivable');
+  if (elReceivable) elReceivable.innerText = formatPKR(totalReceivable);
+  const elPayable = document.getElementById('cardPayable');
+  if (elPayable) elPayable.innerText = formatPKR(totalPayable);
 
   // 2. Expiry alert banner calculation
   updateExpiryAlerts();
@@ -385,9 +794,9 @@ function updateDashboard() {
 
 function updateExpiryAlerts() {
   let expired = 0;
-  let in3Days = 0;
-  let in15Days = 0;
   let in30Days = 0;
+  let in60Days = 0;
+  let in90Days = 0;
   const alertItems = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -401,47 +810,54 @@ function updateExpiryAlerts() {
     if (diffDays < 0) {
       expired++;
       alertItems.push({ product: p.name, expiry: p.expiryDate, stock: p.quantity, batch: p.batchNo, badge: `${Math.abs(diffDays)}d ago`, type: 'EXPIRED', color: 'red' });
-    } else if (diffDays <= 3) {
-      in3Days++;
-      alertItems.push({ product: p.name, expiry: p.expiryDate, stock: p.quantity, batch: p.batchNo, badge: `${diffDays}d left`, type: '&le; 3 DAYS', color: 'amber' });
-    } else if (diffDays <= 15) {
-      in15Days++;
-      alertItems.push({ product: p.name, expiry: p.expiryDate, stock: p.quantity, batch: p.batchNo, badge: `${diffDays}d left`, type: '&le; 15 DAYS', color: 'amber' });
     } else if (diffDays <= 30) {
       in30Days++;
-      alertItems.push({ product: p.name, expiry: p.expiryDate, stock: p.quantity, batch: p.batchNo, badge: `${diffDays}d left`, type: '&le; 30 DAYS', color: 'amber' });
+      alertItems.push({ product: p.name, expiry: p.expiryDate, stock: p.quantity, batch: p.batchNo, badge: `${diffDays}d left`, type: '&le; 30 DAYS', color: 'orange' });
+    } else if (diffDays <= 60) {
+      in60Days++;
+      alertItems.push({ product: p.name, expiry: p.expiryDate, stock: p.quantity, batch: p.batchNo, badge: `${diffDays}d left`, type: '&le; 60 DAYS', color: 'amber' });
+    } else if (diffDays <= 90) {
+      in90Days++;
+      alertItems.push({ product: p.name, expiry: p.expiryDate, stock: p.quantity, batch: p.batchNo, badge: `${diffDays}d left`, type: '&le; 90 DAYS', color: 'slate' });
     }
   });
 
-  const total = expired + in3Days + in15Days + in30Days;
-  document.getElementById('expiryBadgeTotal').innerText = `${total} items`;
-  document.getElementById('cntExpired').innerText = expired;
-  document.getElementById('cnt3Days').innerText = in3Days;
-  document.getElementById('cnt15Days').innerText = in15Days;
-  document.getElementById('cnt30Days').innerText = in30Days;
+  const total = expired + in30Days + in60Days + in90Days;
+  const expBadge = document.getElementById('expiryBadgeTotal');
+  if (expBadge) expBadge.innerText = `${total} items`;
+  const elExpired = document.getElementById('cntExpired');
+  if (elExpired) elExpired.innerText = expired;
+  const el30 = document.getElementById('cnt30Days');
+  if (el30) el30.innerText = in30Days;
+  const el60 = document.getElementById('cnt60Days');
+  if (el60) el60.innerText = in60Days;
+  const el90 = document.getElementById('cnt90Days');
+  if (el90) el90.innerText = in90Days;
 
   const container = document.getElementById('expiryItemsList');
-  if (alertItems.length === 0) {
-    container.innerHTML = `
-      <div class="p-3 bg-emerald-50/50 border border-dashed border-emerald-200 rounded-lg text-center flex items-center justify-center gap-2 text-emerald-800">
-        <i class="fa-regular fa-circle-check text-emerald-600"></i>
-        <span class="text-xs font-semibold">No Expiry Alerts Found. All agrochemicals are well within shelf life.</span>
-      </div>`;
-  } else {
-    container.innerHTML = alertItems.map(item => `
-      <div class="flex items-center justify-between p-2.5 bg-${item.color}-50/40 rounded-lg border border-${item.color}-200 hover:bg-${item.color}-50/80 transition">
-        <div class="flex items-center gap-2.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-${item.color === 'red' ? 'red-600 ring-4 ring-red-100' : 'amber-500 ring-4 ring-amber-100'} shrink-0"></span>
-          <div>
-            <h4 class="font-bold text-xs text-slate-900 uppercase">${item.product}</h4>
-            <p class="text-[11px] text-slate-500">Batch: <span class="font-medium text-slate-700 font-mono">${item.batch || 'N/A'}</span> &bull; Exp: <span class="font-medium text-slate-700">${item.expiry}</span> &bull; Stock: <span class="font-semibold text-slate-800">${item.stock} Pack</span></p>
+  if (container) {
+    if (alertItems.length === 0) {
+      container.innerHTML = `
+        <div class="p-3 bg-emerald-50/50 border border-dashed border-emerald-200 rounded-lg text-center flex items-center justify-center gap-2 text-emerald-800">
+          <i class="fa-regular fa-circle-check text-emerald-600"></i>
+          <span class="text-xs font-semibold">No Expiry Alerts Found. All agrochemicals are well within shelf life.</span>
+        </div>`;
+    } else {
+      container.innerHTML = alertItems.map(item => `
+        <div class="flex items-center justify-between p-2.5 bg-${item.color}-50/40 rounded-lg border border-${item.color}-200 hover:bg-${item.color}-50/80 transition">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-${item.color === 'red' ? 'red-600 ring-4 ring-red-100' : 'amber-500 ring-4 ring-amber-100'} shrink-0"></span>
+            <div>
+              <h4 class="font-bold text-xs text-slate-900 uppercase">${item.product}</h4>
+              <p class="text-[11px] text-slate-500">Batch: <span class="font-medium text-slate-700 font-mono">${item.batch || 'N/A'}</span> &bull; Exp: <span class="font-medium text-slate-700">${item.expiry}</span> &bull; Stock: <span class="font-semibold text-slate-800">${item.stock} Pack</span></p>
+            </div>
           </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${item.color}-100 text-${item.color}-800 border border-${item.color}-200">
+            ${item.badge}
+          </span>
         </div>
-        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${item.color}-100 text-${item.color}-800 border border-${item.color}-200">
-          ${item.badge}
-        </span>
-      </div>
-    `).join('');
+      `).join('');
+    }
   }
 }
 
@@ -449,109 +865,119 @@ function updateStockAlerts() {
   const lowStock = appData.products.filter(p => Number(p.quantity) > 0 && Number(p.quantity) < 5);
   const outOfStock = appData.products.filter(p => Number(p.quantity) <= 0);
 
-  document.getElementById('badgeLowStock').innerText = lowStock.length;
-  document.getElementById('badgeOutOfStock').innerText = outOfStock.length;
+  const elLow = document.getElementById('badgeLowStock');
+  if (elLow) elLow.innerText = lowStock.length;
+  const elOut = document.getElementById('badgeOutOfStock');
+  if (elOut) elOut.innerText = outOfStock.length;
 
   const lowContainer = document.getElementById('containerLowStock');
-  if (lowStock.length === 0) {
-    lowContainer.innerHTML = `
-      <div class="w-10 h-10 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-2">
-        <i class="fa-solid fa-check"></i>
-      </div>
-      <p class="font-semibold text-slate-700">No items running low on stock.</p>
-      <p class="text-[11px] text-slate-400">All inventory is optimal.</p>`;
-  } else {
-    lowContainer.innerHTML = `<div class="divide-y divide-slate-100 text-left">` + 
-      lowStock.map(p => `
-        <div class="py-2 px-1 flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-800">${p.name}</span>
-          <span class="px-2.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[11px]">${p.quantity} Pack</span>
+  if (lowContainer) {
+    if (lowStock.length === 0) {
+      lowContainer.innerHTML = `
+        <div class="w-10 h-10 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-2">
+          <i class="fa-solid fa-check"></i>
         </div>
-      `).join('') + `</div>`;
+        <p class="font-semibold text-slate-700">No items running low on stock.</p>
+        <p class="text-[11px] text-slate-400">All inventory is optimal.</p>`;
+    } else {
+      lowContainer.innerHTML = `<div class="divide-y divide-slate-100 text-left">` + 
+        lowStock.map(p => `
+          <div class="py-2 px-1 flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-800">${p.name}</span>
+            <span class="px-2.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[11px]">${p.quantity} Pack</span>
+          </div>
+        `).join('') + `</div>`;
+    }
   }
 
   const outContainer = document.getElementById('containerOutOfStock');
-  if (outOfStock.length === 0) {
-    outContainer.innerHTML = `
-      <div class="w-10 h-10 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
-        <i class="fa-solid fa-circle-check"></i>
-      </div>
-      <p class="font-semibold text-slate-700">No out-of-stock items detected.</p>
-      <p class="text-[11px] text-slate-400">Warehouse status normal.</p>`;
-  } else {
-    outContainer.innerHTML = `<div class="divide-y divide-slate-100 text-left">` + 
-      outOfStock.map(p => `
-        <div class="py-2 px-1 flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-800">${p.name}</span>
-          <span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold text-[11px] border border-red-200">Out of Stock</span>
+  if (outContainer) {
+    if (outOfStock.length === 0) {
+      outContainer.innerHTML = `
+        <div class="w-10 h-10 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+          <i class="fa-solid fa-circle-check"></i>
         </div>
-      `).join('') + `</div>`;
+        <p class="font-semibold text-slate-700">No out-of-stock items detected.</p>
+        <p class="text-[11px] text-slate-400">Warehouse status normal.</p>`;
+    } else {
+      outContainer.innerHTML = `<div class="divide-y divide-slate-100 text-left">` + 
+        outOfStock.map(p => `
+          <div class="py-2 px-1 flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-800">${p.name}</span>
+            <span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold text-[11px] border border-red-200">Out of Stock</span>
+          </div>
+        `).join('') + `</div>`;
+    }
   }
 }
 
 function renderTopPartners() {
   // Top Farmers
   const custContainer = document.getElementById('topCustomersList');
-  if (appData.farmers.length === 0) {
-    custContainer.innerHTML = `
-      <div class="py-8 px-4 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
-        <i class="fa-solid fa-user-slash text-slate-300 text-2xl mb-2"></i>
-        <p class="text-xs font-semibold text-slate-600">No customer sales or ledger transactions recorded yet.</p>
-        <p class="text-[11px] text-slate-400 mt-0.5">Click "+ New Sale" to log transactions.</p>
-      </div>`;
-  } else {
-    const sortedFarmers = [...appData.farmers].sort((a, b) => (b.balanceDue || 0) - (a.balanceDue || 0)).slice(0, 5);
-    custContainer.innerHTML = sortedFarmers.map(f => `
-      <div class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition border border-slate-100 bg-white">
-        <div class="flex items-center gap-2.5">
-          <div class="w-7 h-7 rounded-full bg-emerald-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
-            ${f.name.charAt(0).toUpperCase()}
+  if (custContainer) {
+    if (appData.farmers.length === 0) {
+      custContainer.innerHTML = `
+        <div class="py-8 px-4 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+          <i class="fa-solid fa-user-slash text-slate-300 text-2xl mb-2"></i>
+          <p class="text-xs font-semibold text-slate-600">No customer sales or ledger transactions recorded yet.</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Click "+ New Sale" to log transactions.</p>
+        </div>`;
+    } else {
+      const sortedFarmers = [...appData.farmers].sort((a, b) => (b.balanceDue || 0) - (a.balanceDue || 0)).slice(0, 5);
+      custContainer.innerHTML = sortedFarmers.map(f => `
+        <div class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition border border-slate-100 bg-white">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-full bg-emerald-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
+              ${f.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <span class="text-xs font-semibold text-slate-800 truncate block max-w-[180px]">${f.name}</span>
+              <span class="text-[10px] text-slate-400">${f.location || 'Pull 88,000'}</span>
+            </div>
           </div>
-          <div>
-            <span class="text-xs font-semibold text-slate-800 truncate block max-w-[180px]">${f.name}</span>
-            <span class="text-[10px] text-slate-400">${f.location || 'Pull 88,000'}</span>
+          <div class="text-right">
+            <span class="text-xs font-bold ${f.balanceDue > 0 ? 'text-amber-700' : 'text-slate-500'}">
+              ${formatPKR(f.balanceDue || 0)}
+            </span>
+            <span class="block text-[9px] uppercase font-semibold text-slate-400">${f.balanceDue > 0 ? 'Udhaar' : 'Clear'}</span>
           </div>
         </div>
-        <div class="text-right">
-          <span class="text-xs font-bold ${f.balanceDue > 0 ? 'text-amber-700' : 'text-slate-500'}">
-            ${formatPKR(f.balanceDue || 0)}
-          </span>
-          <span class="block text-[9px] uppercase font-semibold text-slate-400">${f.balanceDue > 0 ? 'Udhaar' : 'Clear'}</span>
-        </div>
-      </div>
-    `).join('');
+      `).join('');
+    }
   }
 
   // Top Suppliers
   const supContainer = document.getElementById('topSuppliersList');
-  if (appData.suppliers.length === 0) {
-    supContainer.innerHTML = `
-      <div class="py-8 px-4 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
-        <i class="fa-solid fa-building-circle-exclamation text-slate-300 text-2xl mb-2"></i>
-        <p class="text-xs font-semibold text-slate-600">No supplier purchase records found.</p>
-        <p class="text-[11px] text-slate-400 mt-0.5">Click "+ New Purchase" to record inventory arrival.</p>
-      </div>`;
-  } else {
-    const sortedSuppliers = [...appData.suppliers].sort((a, b) => (b.payableDue || 0) - (a.payableDue || 0)).slice(0, 5);
-    supContainer.innerHTML = sortedSuppliers.map(s => `
-      <div class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition border border-slate-100 bg-white">
-        <div class="flex items-center gap-2.5">
-          <div class="w-7 h-7 rounded-full bg-emerald-900 text-amber-300 font-bold text-xs flex items-center justify-center shrink-0 border border-amber-300/40">
-            ${s.name.charAt(0).toUpperCase()}
+  if (supContainer) {
+    if (appData.suppliers.length === 0) {
+      supContainer.innerHTML = `
+        <div class="py-8 px-4 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+          <i class="fa-solid fa-building-circle-exclamation text-slate-300 text-2xl mb-2"></i>
+          <p class="text-xs font-semibold text-slate-600">No supplier purchase records found.</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Click "+ New Purchase" to record inventory arrival.</p>
+        </div>`;
+    } else {
+      const sortedSuppliers = [...appData.suppliers].sort((a, b) => (b.payableDue || 0) - (a.payableDue || 0)).slice(0, 5);
+      supContainer.innerHTML = sortedSuppliers.map(s => `
+        <div class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition border border-slate-100 bg-white">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-full bg-emerald-900 text-amber-300 font-bold text-xs flex items-center justify-center shrink-0 border border-amber-300/40">
+              ${s.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <span class="text-xs font-semibold text-slate-800 truncate block max-w-[180px]">${s.name}</span>
+              <span class="text-[10px] text-slate-400">Total: ${formatPKR(s.totalPurchased || 0)}</span>
+            </div>
           </div>
-          <div>
-            <span class="text-xs font-semibold text-slate-800 truncate block max-w-[180px]">${s.name}</span>
-            <span class="text-[10px] text-slate-400">Total: ${formatPKR(s.totalPurchased || 0)}</span>
+          <div class="text-right">
+            <span class="text-xs font-bold ${s.payableDue > 0 ? 'text-red-600' : 'text-slate-500'}">
+              ${formatPKR(s.payableDue || 0)}
+            </span>
+            <span class="block text-[9px] uppercase font-semibold text-slate-400">${s.payableDue > 0 ? 'Payable' : 'Settled'}</span>
           </div>
         </div>
-        <div class="text-right">
-          <span class="text-xs font-bold ${s.payableDue > 0 ? 'text-red-600' : 'text-slate-500'}">
-            ${formatPKR(s.payableDue || 0)}
-          </span>
-          <span class="block text-[9px] uppercase font-semibold text-slate-400">${s.payableDue > 0 ? 'Payable' : 'Settled'}</span>
-        </div>
-      </div>
-    `).join('');
+      `).join('');
+    }
   }
 }
 
@@ -571,19 +997,25 @@ function populateSaleProductsSelect() {
 
 function onSaleProductChange() {
   const select = document.getElementById('saleProductSelect');
-  const opt = select.options[select.selectedIndex];
+  if (!select) return;
+  const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
   if (!opt || !opt.value) return;
 
+  const pNameInput = document.getElementById('saleProductName');
+  const pPriceInput = document.getElementById('salePrice');
+  const pBatchInput = document.getElementById('saleBatchNo');
+  const pExpInput = document.getElementById('saleExpiryDate');
+
   if (opt.value === 'custom') {
-    document.getElementById('saleProductName').value = '';
-    document.getElementById('salePrice').value = 0;
-    document.getElementById('saleBatchNo').value = '';
-    document.getElementById('saleExpiryDate').value = '';
+    if (pNameInput) pNameInput.value = '';
+    if (pPriceInput) pPriceInput.value = 0;
+    if (pBatchInput) pBatchInput.value = '';
+    if (pExpInput) pExpInput.value = '';
   } else {
-    document.getElementById('saleProductName').value = opt.getAttribute('data-name') || '';
-    document.getElementById('salePrice').value = opt.getAttribute('data-price') || 0;
-    document.getElementById('saleBatchNo').value = opt.getAttribute('data-batch') || '';
-    document.getElementById('saleExpiryDate').value = opt.getAttribute('data-exp') || '';
+    if (pNameInput) pNameInput.value = opt.getAttribute('data-name') || '';
+    if (pPriceInput) pPriceInput.value = opt.getAttribute('data-price') || 0;
+    if (pBatchInput) pBatchInput.value = opt.getAttribute('data-batch') || '';
+    if (pExpInput) pExpInput.value = opt.getAttribute('data-exp') || '';
   }
   calcSaleTotals();
 }
@@ -604,14 +1036,16 @@ function onPaymentTypeChange() {
 }
 
 function calcSaleTotals() {
-  const qty = Number(document.getElementById('saleQty').value) || 0;
-  const price = Number(document.getElementById('salePrice').value) || 0;
+  const qty = Number(document.getElementById('saleQty')?.value) || 0;
+  const price = Number(document.getElementById('salePrice')?.value) || 0;
   const total = qty * price;
-  document.getElementById('saleTotalDisplay').innerText = formatPKR(total);
+  const totalDisplay = document.getElementById('saleTotalDisplay');
+  if (totalDisplay) totalDisplay.innerText = formatPKR(total);
 
-  const cashRec = Number(document.getElementById('saleCashReceived').value) || 0;
+  const cashRec = Number(document.getElementById('saleCashReceived')?.value) || 0;
   const creditDue = Math.max(0, total - cashRec);
-  document.getElementById('saleCreditDue').value = creditDue;
+  const creditDueInput = document.getElementById('saleCreditDue');
+  if (creditDueInput) creditDueInput.value = creditDue;
 }
 
 function submitSale(e) {
@@ -696,6 +1130,7 @@ function submitSale(e) {
 
   updateDashboard();
   closeModal('saleModal');
+  playAudioFeedback('add');
   showToast('Sale Registered!', `${formatPKR(totalAmount)} logged for ${farmerName}.`);
 
   // Prompt WhatsApp Invoice option if credit or phone exists
@@ -709,8 +1144,10 @@ function submitSale(e) {
   }
 
   // Reset form
-  document.getElementById('saleForm').reset();
-  document.getElementById('saleLocation').value = 'Pull 88,000';
+  const saleForm = document.getElementById('saleForm');
+  if (saleForm) saleForm.reset();
+  const saleLoc = document.getElementById('saleLocation');
+  if (saleLoc) saleLoc.value = 'Pull 88,000';
   calcSaleTotals();
 }
 
@@ -749,14 +1186,16 @@ Thank you for trusting Kissan Spray Center!`;
 // 8. PURCHASE TRANSACTIONS & INVENTORY CREATION
 // =========================================================================
 function calcPurchTotals() {
-  const cost = Number(document.getElementById('purchCostPrice').value) || 0;
-  const qty = Number(document.getElementById('purchStockQty').value) || 0;
+  const cost = Number(document.getElementById('purchCostPrice')?.value) || 0;
+  const qty = Number(document.getElementById('purchStockQty')?.value) || 0;
   const total = cost * qty;
-  document.getElementById('purchTotalBill').value = total;
+  const totalBillInput = document.getElementById('purchTotalBill');
+  if (totalBillInput) totalBillInput.value = total;
 
-  const paid = Number(document.getElementById('purchPaid').value) || 0;
+  const paid = Number(document.getElementById('purchPaid')?.value) || 0;
   const payable = Math.max(0, total - paid);
-  document.getElementById('purchBalancePayable').value = payable;
+  const balInput = document.getElementById('purchBalancePayable');
+  if (balInput) balInput.value = payable;
 }
 
 function submitPurchase(e) {
@@ -817,6 +1256,7 @@ function submitPurchase(e) {
 
   updateDashboard();
   closeModal('purchaseModal');
+  playAudioFeedback('add');
   showToast('Stock Purchased!', `Added ${qty} packs of ${productName} from ${supplierName}.`);
 
   document.getElementById('purchaseForm').reset();
@@ -838,9 +1278,11 @@ function populateFarmerSelect() {
 
 function onRecFarmerChange() {
   const sel = document.getElementById('recFarmerSelect');
-  const opt = sel.options[sel.selectedIndex];
+  if (!sel) return;
+  const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
   const due = opt ? (opt.getAttribute('data-due') || 0) : 0;
-  document.getElementById('recFarmerBalance').innerText = formatPKR(due);
+  const balEl = document.getElementById('recFarmerBalance');
+  if (balEl) balEl.innerText = formatPKR(due);
 }
 
 function submitFarmerRecovery(e) {
@@ -871,6 +1313,7 @@ function submitFarmerRecovery(e) {
 
   updateDashboard();
   closeModal('farmerPaymentModal');
+  playAudioFeedback('add');
   showToast('Recovery Recorded!', `Received ${formatPKR(amount)} from ${farmer.name}.`);
   document.getElementById('farmerPaymentForm').reset();
 }
@@ -899,6 +1342,7 @@ function submitExpense(e) {
 
   updateDashboard();
   closeModal('expenseModal');
+  playAudioFeedback('add');
   showToast('Expense Logged', `${formatPKR(amount)} for ${category}.`);
   document.getElementById('expenseForm').reset();
 }
@@ -943,10 +1387,10 @@ function renderInventoryTable() {
         <td class="p-2.5 text-slate-600">${p.expiryDate || '-'}</td>
         <td class="p-2.5">${statusPill}</td>
         <td class="p-2.5 text-right space-x-2">
-          <button onclick="editProductStock(${p.id})" class="text-teal-700 hover:text-teal-900 font-bold text-xs" title="Adjust Stock">
+          <button onclick="editProductStock('${p.id}')" class="text-teal-700 hover:text-teal-900 font-bold text-xs" title="Adjust Stock">
             <i class="fa-solid fa-pen-to-square"></i>
           </button>
-          <button onclick="deleteProduct(${p.id})" class="text-red-500 hover:text-red-700 font-bold text-xs" title="Delete Product">
+          <button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:text-red-700 font-bold text-xs" title="Delete Product">
             <i class="fa-solid fa-trash"></i>
           </button>
         </td>
@@ -956,7 +1400,7 @@ function renderInventoryTable() {
 }
 
 function editProductStock(id) {
-  const p = appData.products.find(item => item.id === id);
+  const p = appData.products.find(item => String(item.id) === String(id));
   if (!p) return;
   const newQty = prompt(`Update stock quantity for "${p.name}":`, p.quantity);
   if (newQty !== null && !isNaN(newQty)) {
@@ -970,15 +1414,8 @@ function editProductStock(id) {
 }
 
 function deleteProduct(id) {
-  const p = appData.products.find(item => item.id === id);
-  if (!p) return;
-  if (confirm(`Are you sure you want to remove "${p.name}" from inventory?`)) {
-    appData.products = appData.products.filter(item => item.id !== id);
-    saveLocalData('products');
-    updateDashboard();
-    renderInventoryTable();
-    showToast('Deleted', `Product removed from inventory.`);
-  }
+  const p = appData.products.find(item => String(item.id) === String(id));
+  triggerProtectedDelete('product', id, p ? p.name : 'Product');
 }
 
 // =========================================================================
@@ -1008,9 +1445,12 @@ function renderFarmerLedgers() {
         <td class="p-2.5 font-mono font-bold ${f.balanceDue > 0 ? 'text-amber-700' : 'text-slate-400'}">
           ${formatPKR(f.balanceDue || 0)}
         </td>
-        <td class="p-2.5 text-right space-x-2">
+        <td class="p-2.5 text-right space-x-1.5">
           <button onclick="sendWhatsAppReceipt('${f.name}', '${f.phone || '03426400074'}', ${f.totalPurchases || 0}, ${(f.totalPurchases || 0) - (f.balanceDue || 0)}, ${f.balanceDue || 0}, 'Agrochemicals Ledger', 1)" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold shadow-xs inline-flex items-center gap-1">
             <i class="fa-brands fa-whatsapp text-xs"></i> Send Receipt
+          </button>
+          <button onclick="deleteFarmer('${f.id}')" title="Delete Farmer Profile" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded text-[11px] font-bold">
+            <i class="fa-solid fa-trash"></i>
           </button>
         </td>
       </tr>
@@ -1022,15 +1462,20 @@ function renderFarmerLedgers() {
 // 13. SUPPLIER LEDGERS MODAL
 // =========================================================================
 function renderSupplierLedgers() {
+  const query = (document.getElementById('supplierSearch')?.value || '').toLowerCase();
   const tbody = document.getElementById('supplierTableBody');
   if (!tbody) return;
 
-  if (appData.suppliers.length === 0) {
+  const filtered = appData.suppliers.filter(s => 
+    s.name.toLowerCase().includes(query)
+  );
+
+  if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400 italic">No supplier ledger entries found.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = appData.suppliers.map(s => `
+  tbody.innerHTML = filtered.map(s => `
     <tr class="hover:bg-slate-50 transition">
       <td class="p-2.5 font-bold text-slate-800">${s.name}</td>
       <td class="p-2.5 font-mono text-slate-700">${formatPKR(s.totalPurchased || 0)}</td>
@@ -1038,13 +1483,85 @@ function renderSupplierLedgers() {
       <td class="p-2.5 font-mono font-bold ${s.payableDue > 0 ? 'text-red-600' : 'text-slate-400'}">
         ${formatPKR(s.payableDue || 0)}
       </td>
-      <td class="p-2.5 text-right">
-        <button onclick="paySupplierBill(${s.id})" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded text-[11px] font-bold">
+      <td class="p-2.5 text-right space-x-1">
+        <button onclick="paySupplierBill('${s.id}')" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded text-[11px] font-bold">
           Pay Bill
+        </button>
+        <button onclick="deleteSupplier('${s.id}')" title="Delete Supplier Profile" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded text-[11px] font-bold">
+          <i class="fa-solid fa-trash"></i>
         </button>
       </td>
     </tr>
   `).join('');
+}
+
+// Sales History & Daily Transactions Log
+function renderSalesHistoryTable() {
+  const query = (document.getElementById('salesSearch')?.value || '').toLowerCase();
+  const filterType = document.getElementById('salesFilterType')?.value || 'all';
+  const tbody = document.getElementById('salesHistoryTableBody');
+  if (!tbody) return;
+
+  const filtered = appData.sales.filter(s => {
+    const custName = (s.customerName || s.farmerName || '').toLowerCase();
+    const prodName = (s.productName || '').toLowerCase();
+    const invId = String(s.invoiceId || s.id || '').toLowerCase();
+    const batch = (s.batchNo || '').toLowerCase();
+    const matchesQuery = custName.includes(query) || prodName.includes(query) || invId.includes(query) || batch.includes(query);
+    const matchesType = (filterType === 'all') || (s.paymentType === filterType);
+    return matchesQuery && matchesType;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-400 italic">No sales transactions found matching search criteria.</td></tr>`;
+    return;
+  }
+
+  // Show latest sales first
+  const sorted = [...filtered].reverse();
+
+  tbody.innerHTML = sorted.map(s => {
+    const isCredit = s.paymentType === 'Credit';
+    const total = Number(s.totalAmount || 0);
+    const cashPaid = s.cashPaid !== undefined ? Number(s.cashPaid) : (s.cashReceived !== undefined ? Number(s.cashReceived) : (isCredit ? 0 : total));
+    const udhaar = s.creditRemaining !== undefined ? Number(s.creditRemaining) : (s.creditDue !== undefined ? Number(s.creditDue) : (isCredit ? Math.max(0, total - cashPaid) : 0));
+    const custName = s.customerName || s.farmerName || 'Walk-in Farmer';
+    const custPhone = s.customerPhone || s.phone || '03426400074';
+
+    return `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="p-2.5">
+          <span class="font-bold text-slate-800">${s.date || 'Today'}</span>
+          <p class="font-mono text-[10px] text-slate-400">#${s.invoiceId || s.id}</p>
+        </td>
+        <td class="p-2.5">
+          <span class="font-bold text-slate-800">${custName}</span>
+          ${custPhone ? `<p class="font-mono text-[10px] text-slate-500">${custPhone}</p>` : ''}
+        </td>
+        <td class="p-2.5">
+          <span class="font-bold text-slate-800">${s.productName}</span>
+          ${s.batchNo ? `<span class="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono ml-1">${s.batchNo}</span>` : ''}
+        </td>
+        <td class="p-2.5 font-bold font-mono text-slate-700">${s.quantity || 1} Pack</td>
+        <td class="p-2.5 font-mono font-bold text-slate-900">${formatPKR(total)}</td>
+        <td class="p-2.5 font-mono text-emerald-700 font-semibold">${formatPKR(cashPaid)}</td>
+        <td class="p-2.5 font-mono font-bold ${udhaar > 0 ? 'text-amber-700' : 'text-slate-400'}">${formatPKR(udhaar)}</td>
+        <td class="p-2.5">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isCredit ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+            ${s.paymentType}
+          </span>
+        </td>
+        <td class="p-2.5 text-right space-x-1">
+          <button onclick="sendWhatsAppReceipt('${custName}', '${custPhone}', ${total}, ${cashPaid}, ${udhaar}, '${s.productName}', ${s.quantity || 1})" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold inline-flex items-center gap-1 shadow-xs" title="WhatsApp Receipt">
+            <i class="fa-brands fa-whatsapp text-xs"></i> Receipt
+          </button>
+          <button onclick="deleteSale('${s.id || s.invoiceId}')" title="Delete Sale Record" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded text-[11px] font-bold">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function paySupplierBill(id) {
@@ -1086,30 +1603,395 @@ function renderReports() {
   const grossProfit = grossSales - totalCost;
   const netProfit = grossProfit - totalExpenses;
 
-  document.getElementById('repGrossSales').innerText = formatPKR(grossSales);
-  document.getElementById('repTotalExpenses').innerText = formatPKR(totalExpenses);
-  document.getElementById('repNetProfit').innerText = formatPKR(netProfit);
+  const elGrossSales = document.getElementById('repGrossSales');
+  if (elGrossSales) elGrossSales.innerText = formatPKR(grossSales);
+  const elTotalExp = document.getElementById('repTotalExpenses');
+  if (elTotalExp) elTotalExp.innerText = formatPKR(totalExpenses);
+  const elNetProfit = document.getElementById('repNetProfit');
+  if (elNetProfit) elNetProfit.innerText = formatPKR(netProfit);
 
   const expContainer = document.getElementById('repExpenseList');
-  if (appData.expenses.length === 0) {
-    expContainer.innerHTML = `<p class="text-slate-400 italic">No expenses logged yet.</p>`;
-  } else {
-    expContainer.innerHTML = appData.expenses.map(e => `
-      <div class="p-2 bg-slate-50 border border-slate-200 rounded flex justify-between items-center text-xs">
-        <div>
-          <span class="font-bold text-slate-800">${e.category}</span>
-          <span class="text-slate-400 text-[10px] ml-2">${e.date}</span>
-          ${e.note ? `<p class="text-[11px] text-slate-500">${e.note}</p>` : ''}
+  if (expContainer) {
+    if (appData.expenses.length === 0) {
+      expContainer.innerHTML = `<p class="text-slate-400 italic">No expenses logged yet.</p>`;
+    } else {
+      expContainer.innerHTML = appData.expenses.map(e => `
+        <div class="p-2 bg-slate-50 border border-slate-200 rounded flex justify-between items-center text-xs">
+          <div>
+            <span class="font-bold text-slate-800">${e.category}</span>
+            <span class="text-slate-400 text-[10px] ml-2">${e.date}</span>
+            ${e.note ? `<p class="text-[11px] text-slate-500">${e.note}</p>` : ''}
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-bold text-red-600">${formatPKR(e.amount)}</span>
+            <button onclick="deleteExpense('${e.id}')" title="Delete Expense" class="p-1 text-red-400 hover:text-red-600 rounded">
+              <i class="fa-solid fa-trash text-xs"></i>
+            </button>
+          </div>
         </div>
-        <span class="font-mono font-bold text-red-600">${formatPKR(e.amount)}</span>
-      </div>
-    `).join('');
+      `).join('');
+    }
   }
 }
 
 // =========================================================================
-// 15. EXCEL / CSV BACKUP EXPORT
+// 15. GRANULAR EXCEL & CSV REPORT EXPORT ENGINE
 // =========================================================================
+
+// Safe date formatter for filenames: DD-MM-YYYY
+function getReportDateSuffix() {
+  const d = new Date();
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
+// Pure JS CSV cell escaping (handles Urdu, commas, quotes, line breaks)
+function escapeCSV(val) {
+  if (val === null || val === undefined) return '""';
+  const str = String(val).replace(/\r\n|\r|\n/g, ' ').trim();
+  if (str.includes(',') || str.includes('"') || str.includes(';') || str.includes('\t')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return `"${str}"`;
+}
+
+// Native Pure JavaScript CSV downloader with UTF-8 BOM for Microsoft Excel
+function downloadCSV(filename, csvContent) {
+  try {
+    // \uFEFF Byte Order Mark forces Excel to parse file as UTF-8 Unicode
+    // This prevents Urdu text, Pakistani Rupee symbols, and commas from garbling
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.setAttribute('download', filename);
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 150);
+    showToast('Excel CSV Downloaded', `Saved ${filename}`);
+  } catch (err) {
+    console.error('CSV Download failed', err);
+    showToast('Export Failed', 'Unable to initiate file download');
+  }
+}
+
+// 1. Full Farmer Ledgers Report
+function exportFarmerLedgerCSV() {
+  const dateStr = getReportDateSuffix();
+  const filename = `KISSAN_Farmer_Ledger_${dateStr}.csv`;
+
+  let totalPurchases = 0;
+  let totalPaid = 0;
+  let totalBalance = 0;
+
+  let csv = `"KISSAN SPRAY CENTER - Pull 88,000 | Contact: 03426400074"\n`;
+  csv += `"Full Farmer Ledgers & Outstanding Udhaar Report"\n`;
+  csv += `"Generated Date:","${new Date().toLocaleString()}"\n\n`;
+
+  const headers = [
+    "Farmer Name",
+    "Location / Village",
+    "Phone Number",
+    "Total Bill (Rs.)",
+    "Paid Amount (Rs.)",
+    "Outstanding Balance (Rs.)",
+    "Payment Status"
+  ];
+  csv += headers.map(escapeCSV).join(',') + '\n';
+
+  if (appData.farmers.length === 0) {
+    csv += `"No farmer ledger entries found.",,,,,\n`;
+  } else {
+    appData.farmers.forEach(f => {
+      const bill = Number(f.totalPurchases || 0);
+      const balance = Number(f.balanceDue || 0);
+      const paid = Math.max(0, bill - balance);
+      const status = balance > 0 ? "Pending Udhaar" : "Clear";
+
+      totalPurchases += bill;
+      totalPaid += paid;
+      totalBalance += balance;
+
+      const row = [
+        f.name || 'Unnamed Farmer',
+        f.location || 'Pull 88,000',
+        f.phone || '03426400074',
+        bill,
+        paid,
+        balance,
+        status
+      ];
+      csv += row.map(escapeCSV).join(',') + '\n';
+    });
+  }
+
+  // Summary row
+  csv += `\n"TOTALS SUMMARY",,"","${totalPurchases}","${totalPaid}","${totalBalance}",""\n`;
+
+  downloadCSV(filename, csv);
+}
+
+// 2. Complete Stock & Inventory Report
+function exportInventoryCSV() {
+  const dateStr = getReportDateSuffix();
+  const filename = `KISSAN_Stock_Inventory_${dateStr}.csv`;
+
+  let totalPacks = 0;
+  let totalCostValuation = 0;
+  let totalSaleValuation = 0;
+
+  let csv = `"KISSAN SPRAY CENTER - Pull 88,000 | Contact: 03426400074"\n`;
+  csv += `"Complete Stock & Inventory Valuation Report"\n`;
+  csv += `"Generated Date:","${new Date().toLocaleString()}"\n\n`;
+
+  const headers = [
+    "Product Name",
+    "Category",
+    "Batch No",
+    "Expiry Date",
+    "Purchase Price (Rs.)",
+    "Sale Price (Rs.)",
+    "Current Stock (Packs)",
+    "Stock Valuation - Cost (Rs.)",
+    "Stock Valuation - Retail (Rs.)",
+    "Stock Status"
+  ];
+  csv += headers.map(escapeCSV).join(',') + '\n';
+
+  const today = new Date();
+  if (appData.products.length === 0) {
+    csv += `"No products found in inventory.",,,,,,,,,\n`;
+  } else {
+    appData.products.forEach(p => {
+      const qty = Number(p.quantity || 0);
+      const pPrice = Number(p.purchasePrice || 0);
+      const sPrice = Number(p.salePrice || 0);
+      const costVal = qty * pPrice;
+      const saleVal = qty * sPrice;
+
+      totalPacks += qty;
+      totalCostValuation += costVal;
+      totalSaleValuation += saleVal;
+
+      let status = "Optimal Stock";
+      if (qty <= 0) status = "Out of Stock";
+      else if (qty < 5) status = "Low Stock";
+
+      if (p.expiryDate) {
+        const exp = new Date(p.expiryDate);
+        const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) status += " [EXPIRED]";
+        else if (diffDays <= 30) status += ` [Expiring in ${diffDays}d]`;
+      }
+
+      const row = [
+        p.name,
+        p.category || 'General',
+        p.batchNo || 'N/A',
+        p.expiryDate || 'N/A',
+        pPrice,
+        sPrice,
+        qty,
+        costVal,
+        saleVal,
+        status
+      ];
+      csv += row.map(escapeCSV).join(',') + '\n';
+    });
+  }
+
+  // Summary row
+  csv += `\n"TOTALS SUMMARY",,"","","","","${totalPacks}","${totalCostValuation}","${totalSaleValuation}",""\n`;
+
+  downloadCSV(filename, csv);
+}
+
+// 3. Daily / Monthly Sales Log Report
+function exportSalesLogCSV() {
+  const dateStr = getReportDateSuffix();
+  const filename = `KISSAN_Sales_Log_${dateStr}.csv`;
+
+  let totalSalesAmt = 0;
+  let totalCash = 0;
+  let totalCredit = 0;
+
+  let csv = `"KISSAN SPRAY CENTER - Pull 88,000 | Contact: 03426400074"\n`;
+  csv += `"Daily & Monthly Sales Transactions Log"\n`;
+  csv += `"Generated Date:","${new Date().toLocaleString()}"\n\n`;
+
+  const headers = [
+    "Date",
+    "Invoice No",
+    "Customer (Farmer)",
+    "Customer Phone",
+    "Items Purchased",
+    "Batch No",
+    "Quantity",
+    "Unit Price (Rs.)",
+    "Total Amount (Rs.)",
+    "Payment Method",
+    "Cash Paid (Rs.)",
+    "Outstanding Udhaar (Rs.)"
+  ];
+  csv += headers.map(escapeCSV).join(',') + '\n';
+
+  if (appData.sales.length === 0) {
+    csv += `"No sales transactions recorded.",,,,,,,,,,,\n`;
+  } else {
+    appData.sales.forEach(s => {
+      const isCredit = s.paymentType === 'Credit';
+      const total = Number(s.totalAmount || 0);
+      const cash = s.cashPaid !== undefined ? Number(s.cashPaid) : (s.cashReceived !== undefined ? Number(s.cashReceived) : (isCredit ? 0 : total));
+      const udhaar = s.creditRemaining !== undefined ? Number(s.creditRemaining) : (s.creditDue !== undefined ? Number(s.creditDue) : (isCredit ? Math.max(0, total - cash) : 0));
+      const custName = s.customerName || s.farmerName || 'Walk-in Farmer';
+      const custPhone = s.customerPhone || s.phone || '03426400074';
+
+      totalSalesAmt += total;
+      totalCash += cash;
+      totalCredit += udhaar;
+
+      const row = [
+        s.date || 'Today',
+        s.invoiceId || s.id,
+        custName,
+        custPhone,
+        s.productName || 'General Product',
+        s.batchNo || 'N/A',
+        s.quantity || 1,
+        s.salePrice || 0,
+        total,
+        s.paymentType || 'Cash',
+        cash,
+        udhaar
+      ];
+      csv += row.map(escapeCSV).join(',') + '\n';
+    });
+  }
+
+  // Summary row
+  csv += `\n"TOTALS SUMMARY",,"","","","","","","${totalSalesAmt}","","${totalCash}","${totalCredit}"\n`;
+
+  downloadCSV(filename, csv);
+}
+
+// 4. Supplier Purchases & Payables Report
+function exportSupplierPayablesCSV() {
+  const dateStr = getReportDateSuffix();
+  const filename = `KISSAN_Supplier_Payables_${dateStr}.csv`;
+
+  let totalProcured = 0;
+  let totalPaid = 0;
+  let totalPayable = 0;
+
+  let csv = `"KISSAN SPRAY CENTER - Pull 88,000 | Contact: 03426400074"\n`;
+  csv += `"Supplier Purchases & Company Payables Report"\n`;
+  csv += `"Generated Date:","${new Date().toLocaleString()}"\n\n`;
+
+  const headers = [
+    "Supplier / Company Name",
+    "Total Procured (Rs.)",
+    "Amount Paid (Rs.)",
+    "Outstanding Payable (Rs.)",
+    "Payment Status"
+  ];
+  csv += headers.map(escapeCSV).join(',') + '\n';
+
+  if (appData.suppliers.length === 0) {
+    csv += `"No supplier ledger entries found.",,,,\n`;
+  } else {
+    appData.suppliers.forEach(s => {
+      const procured = Number(s.totalPurchased || 0);
+      const paid = Number(s.amountPaid || 0);
+      const payable = Number(s.payableDue || 0);
+      const status = payable > 0 ? "Payment Due" : "Paid in Full";
+
+      totalProcured += procured;
+      totalPaid += paid;
+      totalPayable += payable;
+
+      const row = [
+        s.name,
+        procured,
+        paid,
+        payable,
+        status
+      ];
+      csv += row.map(escapeCSV).join(',') + '\n';
+    });
+  }
+
+  // Summary row
+  csv += `\n"TOTALS SUMMARY","${totalProcured}","${totalPaid}","${totalPayable}",""\n`;
+
+  downloadCSV(filename, csv);
+}
+
+// 5. Expense Register Report
+function exportExpenseRegisterCSV() {
+  const dateStr = getReportDateSuffix();
+  const filename = `KISSAN_Expense_Register_${dateStr}.csv`;
+
+  let totalExp = 0;
+
+  let csv = `"KISSAN SPRAY CENTER - Pull 88,000 | Contact: 03426400074"\n`;
+  csv += `"Shop Overhead & Expense Register Report"\n`;
+  csv += `"Generated Date:","${new Date().toLocaleString()}"\n\n`;
+
+  const headers = [
+    "Date",
+    "Expense Category",
+    "Description / Bill Memo",
+    "Amount (Rs.)"
+  ];
+  csv += headers.map(escapeCSV).join(',') + '\n';
+
+  if (appData.expenses.length === 0) {
+    csv += `"No expenses recorded.",,,\n`;
+  } else {
+    appData.expenses.forEach(e => {
+      const amt = Number(e.amount || 0);
+      totalExp += amt;
+
+      const row = [
+        e.date || 'N/A',
+        e.category || 'Shop Expense',
+        e.note || '',
+        amt
+      ];
+      csv += row.map(escapeCSV).join(',') + '\n';
+    });
+  }
+
+  // Summary row
+  csv += `\n"TOTAL EXPENSES",,"","${totalExp}"\n`;
+
+  downloadCSV(filename, csv);
+}
+
+// Update counters on Export Modal
+function updateExcelExportCounters() {
+  const setTxt = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = txt;
+  };
+  setTxt('exportCountFarmers', `${appData.farmers.length} Farmers`);
+  setTxt('exportCountProducts', `${appData.products.length} Products`);
+  setTxt('exportCountSales', `${appData.sales.length} Invoices`);
+  setTxt('exportCountSuppliers', `${appData.suppliers.length} Suppliers`);
+  setTxt('exportCountExpenses', `${appData.expenses.length} Expenses`);
+}
+
+function openExcelExportModal() {
+  updateExcelExportCounters();
+  openModal('excelExportModal');
+}
+
+// Comprehensive Master Database Backup
 function exportAllCSV() {
   const collections = [
     { name: 'Products_Inventory', data: appData.products },
@@ -1119,7 +2001,7 @@ function exportAllCSV() {
     { name: 'Shop_Expenses', data: appData.expenses }
   ];
 
-  let combinedCSV = `KISSAN SPRAY CENTER - DATABASE BACKUP\nPull 88,000 | Contact: 03426400074\nDate: ${new Date().toLocaleString()}\n\n`;
+  let combinedCSV = `KISSAN SPRAY CENTER - MASTER DATABASE BACKUP\nPull 88,000 | Contact: 03426400074\nDate: ${new Date().toLocaleString()}\n\n`;
 
   collections.forEach(col => {
     combinedCSV += `=== ${col.name.toUpperCase()} ===\n`;
@@ -1142,16 +2024,8 @@ function exportAllCSV() {
     combinedCSV += '\n';
   });
 
-  const blob = new Blob([combinedCSV], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Kissan_Spray_Center_Backup_${new Date().toISOString().split('T')[0]}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('Backup Exported', 'Downloaded complete database CSV');
+  const filename = `KISSAN_Master_Backup_${getReportDateSuffix()}.csv`;
+  downloadCSV(filename, combinedCSV);
 }
 
 // =========================================================================
@@ -1211,9 +2085,17 @@ function resetAllDataToZero() {
   appData.farmers = [];
   appData.suppliers = [];
   appData.expenses = [];
+  appData.employees = [];
+  appData.banks = [];
+  appData.bankTransactions = [];
+  appData.cashTransactions = [];
+  appData.returns = [];
 
   saveLocalData();
   updateDashboard();
+  if (typeof renderActiveView === 'function') {
+    renderActiveView();
+  }
   showToast('Reset to ZERO', 'All metrics and tables are now at zero state.');
 }
 
@@ -1260,6 +2142,14 @@ window.submitPurchase = submitPurchase;
 window.submitFarmerRecovery = submitFarmerRecovery;
 window.submitExpense = submitExpense;
 window.exportAllCSV = exportAllCSV;
+window.exportFarmerLedgerCSV = exportFarmerLedgerCSV;
+window.exportInventoryCSV = exportInventoryCSV;
+window.exportSalesLogCSV = exportSalesLogCSV;
+window.exportSupplierPayablesCSV = exportSupplierPayablesCSV;
+window.exportExpenseRegisterCSV = exportExpenseRegisterCSV;
+window.openExcelExportModal = openExcelExportModal;
+window.updateExcelExportCounters = updateExcelExportCounters;
+window.renderSalesHistoryTable = renderSalesHistoryTable;
 window.loadSampleDemoData = loadSampleDemoData;
 window.resetAllDataToZero = resetAllDataToZero;
 window.editProductStock = editProductStock;
